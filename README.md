@@ -147,7 +147,7 @@ la variabile globale `osErrno` è inizializzata con un appropriato codice di err
 definiti nel file `fslib.h`.
 
 # 3 Disco Virtuale
-Il file system memorizza file directory e strutture dati del file-systme su un disco virtuale realizzato dalla
+Il file system memorizza file directory e strutture dati del file-system su un disco virtuale realizzato dalla
 libreria `dummydisk`.
 La libreria realizza un disco di `NUM_SECTORS` settori ciascuno di dimensione `SECTOR_SIZE` bytes.
 Il disco virtuale può essere creato mediante la funzione `Disk_Create()`. Dopo la creazione il disco
