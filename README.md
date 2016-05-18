@@ -4,11 +4,11 @@ Ferrara FileSystem Lib: Proggetto Sistemi Operativi di Pertile e Maffei
 # 1 Introduzione
 Scopo di questo progetto è di creare una libreria user-level che implementa un file-system. La libreria
 permette alle applicazioni di accedere a files e directories memorizzati su un disco virtuale. Il disco è
-realizzato mediante un’altra libreria user-level dummydisk che vi verr`a fornita.
+realizzato mediante un’altra libreria user-level dummydisk che vi verrà fornita.
 
 # 2 FFSlib Specification
 La libreria FFSlib vede il disco come un array di blocchi ciascuno di dimensione uguale o maggiore del
-settore del disco. Il file-system organizza il disco in diverse aeree nel seguente modo:
+settore del disco. Il file-system organizza il disco in diverse aree nel seguente modo:
   
   • Superblock area: un blocco del file-system contenente un identificatore intero corrispondente al
   tipo di file-system; si assuma che il tipo del nostro file-system sia identificato dal codice `0x1717`;
