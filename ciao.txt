@@ -1,6 +1,0 @@
-<<<<<<< HEAD
-
- cixxxx
-=======
-ciao a tutti
->>>>>>> 48a61da8c9d0d1c9c1ab1e638a14f873d86e57e0
