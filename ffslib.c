@@ -1,5 +1,5 @@
-#include "LibFS.h"
-#include "LibDisk.h"
+#include "ffslib.h"
+#include "dummydisk.c"
 
 // global errno value here
 int osErrno;
@@ -11,8 +11,8 @@ int FS_Init(char *path) {
     printf("FS_Init %s\n", path);
 
     // create disk
-    if (Disk_Init() == -1) {
-	    printf("Disk_Init() failed\n");
+    if (Disk_Create() == -1) {
+	    printf("Disk_Create() failed\n");
 	    osErrno = E_GENERAL;
 	    return -1;
     }
