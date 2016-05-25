@@ -1,9 +1,8 @@
 #include <stdio.h>
 
-#include "LibFS.h"
+#include "ffslib.h"
 
-void 
-usage(char *prog) {
+void usage(char *prog) {
   fprintf(stderr, "usage: %s <disk image file>\n", prog);
   exit(1);
 }
@@ -17,7 +16,7 @@ int main(int argc, char *argv[]) {
     }
 
     // initialize disk; if not exists creare it and format; if exist check signature
-    ret = FS_Init(path); 
+    int ret = FS_Init(path); 
 
     // FS ops
 

@@ -54,7 +54,7 @@ int Disk_Load(char* diskname) {
     diskErrno = E_OPENING_FILE;
     return -1;
   }
-  
+
   // actually read the disk image into memory
   if ((fread(disk, sizeof(Sector), NUM_SECTORS, diskFile)) != NUM_SECTORS) {
     fclose(diskFile);
