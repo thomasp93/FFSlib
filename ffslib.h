@@ -54,6 +54,62 @@ int Dir_Unlink(char *path);
     
 ////////////////////////////////////////////////////////////////////////
 
+// GLOBAL VARIABLES
+#define TYPE_FILESYSTEM '0x1717'
+#define DIM_BLOCK 1024
+#define MAX_BLOCK_FILE 32
+#define MAX_FILENAME_LEN 16
+#define MAX_PATHNAME_LEN 256
+#define MAX_FILE_OPEN 10
+
+// block structure
+// list of sectors
+typedef struct _listSector {
+	Sector* sector;
+	(struct _listSector)* next;
+} Block;
+
+// inode structure
+typedef struct _inode {
+	int type; // file or directory type
+	int size; // size Byte
+	Block[MAX_BLOCK_FILE] blocks; // blocks of data that contains the information of inode
+} Inode;
+
+// inode list structure
+// list of inodes
+typedef struct _inodeList {
+	Inode* inode;
+	(struct _inodeList)* next;
+} InodeList;
+
+// area structure
+typedef struct _area {
+	Block* superblock; // superblock
+	Block* inodeBitmap; // inode bitmap
+	Block* dataBitmap; // data bitmap
+	InodeList* inodeList; // inode-list
+	Block* dataBlocks;// data blocks
+} Area;
+
+// file structure
+typedef struct _file {
+	char[MAX_FILENAME_LEN] name;
+	int iopointer;
+	Inode* info; // inode of file
+} File;
+
+// directory structure
+typedef struct _directory {
+	char[MAX_FILENAME_LEN] name;
+	Inode* info;
+} Directory;
+
+// open file table
+typedef struct _table {
+	File[MAX_FILE_OPEN] fileOpen;
+} OpenFileTable;
+
 
 #endif /* __FSLIB_h__ */
 
