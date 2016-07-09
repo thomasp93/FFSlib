@@ -60,7 +60,9 @@ int Dir_Unlink(char *path);
 #define MAX_BLOCK_FILE 32
 #define MAX_FILENAME_LEN 16
 #define MAX_PATHNAME_LEN 256
-#define MAX_FILE_OPEN 10
+#define MAX_FILE_OPEN 32
+#define DIM_GROUP 512
+#define DIM_INODE_TABLE 3
 
 // block structure
 // list of sectors
@@ -72,8 +74,9 @@ typedef struct _listSector {
 // inode structure
 typedef struct _inode {
 	int type; // file or directory type
+	char name[MAX_FILENAME_LEN]; // name of directory or file
 	int size; // size Byte
-	Block[MAX_BLOCK_FILE] blocks; // blocks of data that contains the information of inode
+	Block blocks[MAX_BLOCK_FILE]; // blocks of data that contains the information of inode
 } Inode;
 
 // inode list structure
@@ -83,26 +86,37 @@ typedef struct _inodeList {
 	(struct _inodeList)* next;
 } InodeList;
 
-// area structure
-typedef struct _area {
-	Block* superblock; // superblock
-	Block* inodeBitmap; // inode bitmap
-	Block* dataBitmap; // data bitmap
-	InodeList* inodeList; // inode-list
-	Block* dataBlocks;// data blocks
-} Area;
+// group descriptor structure
+typdef struct _groupDescriptor {
+	int index;
+	int rangeBlockStart;
+	int rangeBlockEnd;
+	int bitmapInodeIndex; // begin of the inode bitmap
+	int bitmapDataBlockIndex; // begin of the data block bitmap
+	int InodeTableIndex; // begin of the inode table
+	int nInodeFree; // number of the inode free
+	int nBlockFree; // number of the data block free
+} GroupDescriptor;
+
+// group structure
+typedef struct _group {
+	Block superblock; // superblock
+	Block groupDescriptor; // group descriptor
+	Block inodeBitmap; // inode bitmap
+	Block dataBitmap; // data bitmap
+	Block inodeTable[DIM_INODE_TABLE]; // inode-list
+	Block dataBlocks[DIM_GROUP-DIM_INODE_TABLE-4];// data blocks
+} Group;
 
 // file structure
 typedef struct _file {
-	char[MAX_FILENAME_LEN] name;
-	int iopointer;
+	int iopointer; // iopointer of the file is set to 0 by default
 	Inode* info; // inode of file
 } File;
 
 // directory structure
 typedef struct _directory {
-	char[MAX_FILENAME_LEN] name;
-	Inode* info;
+	Inode* info; // inode of directory
 } Directory;
 
 // open file table
