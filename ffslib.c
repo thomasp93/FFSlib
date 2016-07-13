@@ -3,7 +3,6 @@
 
 // global errno value here
 int osErrno;
-
 ////////////////////////////////////////////////////////////////////////
 // funzione che crea il tutto, va chiamata una volta sola all'inizio
 int FS_Init(char *path) {
@@ -76,7 +75,19 @@ int FS_Init(char *path) {
 
     return 0;
 }
-
+int FS_Sync(char* diskname){
+    int i=0;
+    while(i < MAX_FILE_OPEN){
+        File_Close(i);
+        i++;
+    }
+    
+    if(Disk_Save(diskname) == -1){
+        return -1;
+    } else {
+        return 0;
+    } 
+}
 
 ////////////////////////////////////////////////////////////////////////
 // File ops
@@ -111,8 +122,15 @@ int File_Write(int fd, void *buffer, int size) {
 ////////////////////////////////////////////////////////////////////////
 
 int File_Seek(int fd, int offset) {
-    printf("FS_Seek\n");
-    return 0;
+    int newiopointer = openFiles->fileOpen[fd]->iopointer + offset; // calculate the new io pointer
+    if( newiopointer > (openFiles->fileOpen[fd]->info->size) || newiopointer < 0 ){ //verify that the iopointer does not cross the file bounds
+        osErrno = E_SEEK_OUT_OF_BOUNDS;
+        return -1;
+    } else {
+        openFiles->fileOpen[fd]->iopointer = newiopointer;
+        printf("FS_Seek\n");
+        return 0;
+    }    
 }
 
 ////////////////////////////////////////////////////////////////////////
