@@ -31,8 +31,8 @@ typedef enum {
 } FS_Error_t;
     
 // File system generic call
-int FS_Init(char *path);
-//int FS_Sync();
+int FS_Create(char *path);
+int FS_Sync();
 
 // file ops
 int File_Create(char *file);
@@ -122,6 +122,7 @@ typedef struct _group {
 
 // file structure
 typedef struct _file {
+	int fileDescriptor;
 	int iopointer; // iopointer of the file is set to 0 by default
 	Inode* info; // inode of file
 } File;
@@ -133,7 +134,7 @@ typedef struct _directory {
 
 // open file table
 typedef struct _table {
-	File fileOpen[MAX_FILE_OPEN];
+	File* fileOpen[MAX_FILE_OPEN];
 } OpenFileTable;
 
 
