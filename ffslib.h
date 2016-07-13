@@ -31,7 +31,7 @@ typedef enum {
 } FS_Error_t;
     
 // File system generic call
-int FS_Create(char *path);
+int FS_Init(char *path);
 //int FS_Sync();
 
 // file ops
@@ -63,6 +63,7 @@ int Dir_Unlink(char *path);
 #define MAX_FILE_OPEN 32
 #define DIM_GROUP 512
 #define DIM_INODE_TABLE 3
+#define INDEX_SIZE 4
 
 // block structure
 // list of sectors
@@ -111,12 +112,12 @@ typedef struct _groupDescriptor {
 
 // group structure
 typedef struct _group {
-	Block superblock; // superblock
-	Block groupDescriptor; // group descriptor
-	Block inodeBitmap; // inode bitmap
-	Block dataBitmap; // data bitmap
-	Block inodeTable[DIM_INODE_TABLE]; // inode-list
-	Block dataBlocks[DIM_GROUP-DIM_INODE_TABLE-4];// data blocks
+	Block* superblock; // superblock
+	Block* groupDescriptor; // group descriptor
+	Block* inodeBitmap; // inode bitmap
+	Block* dataBitmap; // data bitmap
+	Block* inodeTable[DIM_INODE_TABLE]; // inode-list
+	Block* dataBlocks[DIM_GROUP-DIM_INODE_TABLE-4];// data blocks
 } Group;
 
 // file structure

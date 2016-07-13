@@ -7,74 +7,168 @@ int osErrno;
 ////////////////////////////////////////////////////////////////////////
 // funzione che crea il tutto, va chiamata una volta sola all'inizio
 int FS_Init(char *path) {
-    int create, nGroups, i;
+	Block* b = (Block*) calloc(1, sizeof(Block)); // create block
+	Group* group;
+	GroupDescriptor* groupDescriptor;
+	ListSector* tmp;
+	char* s, c;
+	char buff[INDEX_SIZE];
+    int create, nGroups=(SECTOR_SIZE*NUM_SECTORS)/(DIM_BLOCK*DIM_GROUP), i, nC=0, g=0, nS=1;
     
     printf("FS_Init %s\n", path);
 
     // open disk
     if (Disk_Load(path) == -1) { // load the disk
     	if (diskErrno == E_OPENING_FILE) { // if the path not exist
-		if (Disk_Create() == -1) { // create the disk
-			printf("Disk_Create() failed\n"); // with error
+			if (Disk_Create() == -1) { // create the disk
+				printf("Disk_Create() failed\n"); // with error
+				osErrno = E_GENERAL;
+				return -1;
+			}
+			else // disk create
+				create = 0; // set variable
+		}
+		else { // other error of the load disk
+			printf("Disk_Load(*path) failed\n");
 			osErrno = E_GENERAL;
 			return -1;
 		}
-		else // disk create
-			create = 0; // set variable
-	}
-	else { // other error of the load disk
-		printf("Disk_Load(*path) failed\n");
-		osErrno = E_GENERAL;
-		return -1;
-	}
     }
     else create = 1; // disk load
 
     // create data-structure to handle files and directories
-    Block* b = (Block*) calloc(1, sizeof(Block)); // create block
+    // set a default block
     b->nCharWrite = 0;
     b->sectors = NULL;
-    ListSector* tmp;
 
     for(i=0; i<DIM_BLOCK/SECTOR_SIZE; i++) // creation list sector
     {
     	tmp = (ListSector*) calloc(1, sizeof(ListSector));
-	tmp->sector = (Sector*) calloc(1, sizeof(Sector));
-	tmp->next = b->sectors;
+		tmp->sector = (Sector*) calloc(1, sizeof(Sector));
+		tmp->next = b->sectors;
     	b->sectors = tmp;
     }
 
-
     if(create==0) // set disk
     {
-	    	
+		// set the boot block
+		BootBlock* bb = (BootBlock*) calloc(1, sizeof(BootBlock));
+		bb->typeFS = TYPE_FILESYSTEM;
+		bb->startGroupsBlock = (int*) calloc(nGroups, sizeof(int));
+		
+		for (i=0; i<nGroups; i++)
+			bb->startGroupsBlock[i] = 1+i*DIM_GROUP; // calculate the idex of group
+
+		strcat(s, bb->typeFS);
+		nC += strlen(bb->typeFS);
+
+		tmp = b->sectors;
+		while(tmp->sector!=NULL) 
+		{
+			s=(char*) malloc(SECTOR_SIZE*sizeof(char)); // create a char array lenght as the sector
+			while((nC+INDEX_SIZE)<(nS*SECTOR_SIZE) || g<nGroups) // while the new index is less than free char into sector
+			{
+				snprintf(buff, INDEX_SIZE, "0%d", bb->startGroupsBlock[g]);
+				strcat(s, buff);
+				g++;
+				nC+=INDEX_SIZE;
+			}
+			i=0;
+			while(nC==(nS*SECTOR_SIZE) || g<nGroups) // insert char to char into sector while it's full
+			{
+				snprintf(buff, INDEX_SIZE, "0%d", bb->startGroupsBlock[g]);
+				strcat(s, buff[i]);
+				i++;
+				nC++;
+			}
+
+			if(g>=nGroups) // if the all groups are write into the sector
+				bzero(s, SECTOR_SIZE-nC); // insert 0 while the array is full
+			
+			strcpy(tmp->sector->data, s); // copy the sector create
+			Disk_Write(nS-1, b->sectors->sector->data); // write the sector of the block into the disk
+			nS++;
+			tmp->sector=tmp->next; // pass to the next sector
+		}
+
+		// set all the super blocks and rispective group blocks
+		// set a default block
+		b->nCharWrite = 0;
+		b->sectors = NULL;
+
+		for(i=0; i<DIM_BLOCK/SECTOR_SIZE; i++) // creation list sector
+		{
+			tmp = (ListSector*) calloc(1, sizeof(ListSector));
+			tmp->sector = (Sector*) calloc(1, sizeof(Sector));
+			tmp->next = b->sectors;
+			b->sectors = tmp;
+		}
+		
+		for(i=0; i<nGroups; i++)
+		{
+			s = (char*) calloc(1, SECTOR_SIZE*sizeof(char));
+			strcpy(s, TYPE_FILESYSTEM);
+			Disk_Write(bb->startGroupsBlock[i], s); // write the super block
+
+			c = '';
+			strcpy(c, itoa(i)); // index of group
+			
+			snprintf(buff, INDEX_SIZE, "0%d", bb->startGroupsBlock[i]);
+			strcat(c, buff); // begin index of group
+			
+			if(bb->startGroupsBlock[i]+DIM_BLOCK-1 > NUM_SECTORS/DIM_BLOCK)
+				snprintf(buff, INDEX_SIZE, "0%d", NUM_SECTORS/DIM_BLOCK);
+			else
+				snprintf(buff, INDEX_SIZE, "0%d", bb->startGroupsBlock[i]+DIM_BLOCK-1);
+			strcat(c, buff); // end index of group
+
+			snprintf(buff, INDEX_SIZE, "0%d", bb->startGroupsBlock[i]+3);
+			strcat(c, buff); // index of inode bitmap
+
+			snprintf(buff, INDEX_SIZE, "0%d", bb->startGroupsBlock[i]+2);
+			strcat(c, buff); // index of data block bitmap
+
+			snprintf(buff, INDEX_SIZE, "0%d", i*20);
+			strcat(c, buff); // begin index of range inode table
+
+			snprintf(buff, INDEX_SIZE, "0%d", (i+1)*20-1);
+			strcat(c, buff); // end index of range inode table
+
+			strcat(c, itoa(20)); // inode free
+
+			strcat(c, itoa(DIM_GROUP-DIM_INODE_TABLE-4)); // data block free
+
+			strcpy(s, c); // copy the string c into the string lenght as the sector
+			
+			Disk_Write(bb->startGroupsBlock[i]+(DIM_BLOCK/SECTOR_SIZE), s); // write group descriptor
+		}
+
+		Dir_Create("/"); // create the root directory
     }
     else // read exist disk
     {
     	i=0; // first block for get super block
 
-	tmp = b->sectors;
+		tmp = b->sectors;
     	while (tmp!=NULL)
-	{ 
+		{ 
     		Disk_Read(i, tmp->sector->data); // read sector
-		tmp = tmp->next;
-		i++;
-	}
-
-	for(i=0; i<6; i++)
-		if(TYPE_FILESYSTEM[i]!=b->sectors->sector->data[i])
-		{
-			printf("File system not exactly!!");
-			osErrno = E_GENERAL;
-			return -1;
+			tmp = tmp->next;
+			i++;
 		}
 
-	printf("Funziona");
-    }
+		for(i=0; i<6; i++) // control type fs
+			if(TYPE_FILESYSTEM[i]!=b->sectors->sector->data[i]) // fs not exactly
+			{
+				printf("File system not exactly!!");
+				osErrno = E_GENERAL;
+				return -1;
+			}
+		}
 
-    printf("Non funziona");
+		printf("Disk load correctly");
 
-    return 0;
+		return 0;
 }
 
 
