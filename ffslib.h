@@ -63,7 +63,7 @@ int Dir_Unlink(char *path);
 #define MAX_FILE_OPEN 32
 #define DIM_GROUP 512
 #define DIM_INODE_TABLE 3
-#define INDEX_SIZE 4
+#define INDEX_SIZE 5
 
 // block structure
 // list of sectors
@@ -137,6 +137,7 @@ typedef struct _table {
 	File* fileOpen[MAX_FILE_OPEN];
 } OpenFileTable;
 
+OpenFileTable* openFiles; // table of file open
 
 #endif /* __FSLIB_h__ */
 

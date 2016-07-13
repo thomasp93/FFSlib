@@ -13,6 +13,7 @@ int main(void)
 
 	Disk_Create();
 	FS_Init("pips.img");
-	printf("%d", diskErrno);
+	Disk_Save("pips.img");
+	//printf("%05d", 1);
 
 }

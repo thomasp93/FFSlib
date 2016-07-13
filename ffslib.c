@@ -10,32 +10,27 @@ int FS_Init(char *path) {
 	Group* group;
 	GroupDescriptor* groupDescriptor;
 	ListSector* tmp;
-	char* s, c;
+	char* s;
+	char* c;
 	char buff[INDEX_SIZE];
     int create, nGroups=(SECTOR_SIZE*NUM_SECTORS)/(DIM_BLOCK*DIM_GROUP), i, nC=0, g=0, nS=1;
     
     printf("FS_Init %s\n", path);
 
     // open disk
-    if (Disk_Load(path) == -1) { // load the disk
-    	if (diskErrno == E_OPENING_FILE) { // if the path not exist
-			if (Disk_Create() == -1) { // create the disk
-				printf("Disk_Create() failed\n"); // with error
-				osErrno = E_GENERAL;
-				return -1;
-			}
-			else // disk create
-				create = 0; // set variable
-		}
+    if (Disk_Load(path) == -1) { // load the disk with error
+    	if (diskErrno == E_OPENING_FILE) // if the disk not exist
+			create = 0; // set variable for set a default disk
 		else { // other error of the load disk
 			printf("Disk_Load(*path) failed\n");
 			osErrno = E_GENERAL;
 			return -1;
 		}
     }
-    else create = 1; // disk load
+    else create = 1; // disk load correctly
 
     // create data-structure to handle files and directories
+    
     // set a default block
     b->nCharWrite = 0;
     b->sectors = NULL;
@@ -58,36 +53,40 @@ int FS_Init(char *path) {
 		for (i=0; i<nGroups; i++)
 			bb->startGroupsBlock[i] = 1+i*DIM_GROUP; // calculate the idex of group
 
+		s = (char*) calloc(1, SECTOR_SIZE*sizeof(char));
 		strcat(s, bb->typeFS);
 		nC += strlen(bb->typeFS);
 
 		tmp = b->sectors;
-		while(tmp->sector!=NULL) 
+		while(tmp!=NULL) 
 		{
-			s=(char*) malloc(SECTOR_SIZE*sizeof(char)); // create a char array lenght as the sector
-			while((nC+INDEX_SIZE)<(nS*SECTOR_SIZE) || g<nGroups) // while the new index is less than free char into sector
+			while((nC+INDEX_SIZE)<(nS*SECTOR_SIZE) && g<nGroups) // while the new index is less than free char into sector
 			{
-				snprintf(buff, INDEX_SIZE, "0%d", bb->startGroupsBlock[g]);
+				snprintf(buff, INDEX_SIZE, "%04d", bb->startGroupsBlock[g]);
 				strcat(s, buff);
 				g++;
 				nC+=INDEX_SIZE;
 			}
 			i=0;
-			while(nC==(nS*SECTOR_SIZE) || g<nGroups) // insert char to char into sector while it's full
+			while(nC==(nS*SECTOR_SIZE) && g<nGroups) // insert char to char into sector while it's full
 			{
-				snprintf(buff, INDEX_SIZE, "0%d", bb->startGroupsBlock[g]);
-				strcat(s, buff[i]);
+				snprintf(buff, INDEX_SIZE, "%04d", bb->startGroupsBlock[g]);
+				strcat(s, &buff[i]);
 				i++;
 				nC++;
 			}
 
-			if(g>=nGroups) // if the all groups are write into the sector
-				bzero(s, SECTOR_SIZE-nC); // insert 0 while the array is full
+			while(nC<(nS*SECTOR_SIZE) && !(g<nGroups))
+			{
+				strcat(s, "0");
+				nC++;
+			}
 			
 			strcpy(tmp->sector->data, s); // copy the sector create
 			Disk_Write(nS-1, b->sectors->sector->data); // write the sector of the block into the disk
 			nS++;
-			tmp->sector=tmp->next; // pass to the next sector
+			tmp=tmp->next; // pass to the next sector
+			s=(char*) malloc(SECTOR_SIZE*sizeof(char)); // create a char array lenght as the sector
 		}
 
 		// set all the super blocks and rispective group blocks
@@ -106,11 +105,12 @@ int FS_Init(char *path) {
 		for(i=0; i<nGroups; i++)
 		{
 			s = (char*) calloc(1, SECTOR_SIZE*sizeof(char));
+			c = (char*) calloc(1, SECTOR_SIZE*sizeof(char));
 			strcpy(s, TYPE_FILESYSTEM);
 			Disk_Write(bb->startGroupsBlock[i], s); // write the super block
 
-			c = '';
-			strcpy(c, itoa(i)); // index of group
+			snprintf(buff, INDEX_SIZE, "%d", i); // index of group
+			strcpy(c, buff);
 			
 			snprintf(buff, INDEX_SIZE, "0%d", bb->startGroupsBlock[i]);
 			strcat(c, buff); // begin index of group
@@ -133,9 +133,11 @@ int FS_Init(char *path) {
 			snprintf(buff, INDEX_SIZE, "0%d", (i+1)*20-1);
 			strcat(c, buff); // end index of range inode table
 
-			strcat(c, itoa(20)); // inode free
+			snprintf(buff, INDEX_SIZE, "0%d", 20);
+			strcat(c, buff); // inode free
 
-			strcat(c, itoa(DIM_GROUP-DIM_INODE_TABLE-4)); // data block free
+			snprintf(buff, INDEX_SIZE, "0%d", DIM_GROUP-DIM_INODE_TABLE-4);
+			strcat(c, buff); // data block free
 
 			strcpy(s, c); // copy the string c into the string lenght as the sector
 			
@@ -166,6 +168,7 @@ int FS_Init(char *path) {
 		}
 
 		printf("Disk load correctly");
+		openFiles = (OpenFileTable*) malloc(sizeof(OpenFileTable));
 
 		return 0;
 }
