@@ -1,23 +1,78 @@
-#include "ffslib.h"
 #include "dummydisk.c"
+#include "ffslib.h"
 
 // global errno value here
 int osErrno;
 
 ////////////////////////////////////////////////////////////////////////
-
+// funzione che crea il tutto, va chiamata una volta sola all'inizio
 int FS_Init(char *path) {
+    int create, nGroups, i;
     
     printf("FS_Init %s\n", path);
 
-    // create disk
-    if (Disk_Create() == -1) {
-	    printf("Disk_Create() failed\n");
-	    osErrno = E_GENERAL;
-	    return -1;
+    // open disk
+    if (Disk_Load(path) == -1) { // load the disk
+    	if (diskErrno == E_OPENING_FILE) { // if the path not exist
+		if (Disk_Create() == -1) { // create the disk
+			printf("Disk_Create() failed\n"); // with error
+			osErrno = E_GENERAL;
+			return -1;
+		}
+		else // disk create
+			create = 0; // set variable
+	}
+	else { // other error of the load disk
+		printf("Disk_Load(*path) failed\n");
+		osErrno = E_GENERAL;
+		return -1;
+	}
     }
+    else create = 1; // disk load
 
     // create data-structure to handle files and directories
+    Block* b = (Block*) calloc(1, sizeof(Block)); // create block
+    b->nCharWrite = 0;
+    b->sectors = NULL;
+    ListSector* tmp;
+
+    for(i=0; i<DIM_BLOCK/SECTOR_SIZE; i++) // creation list sector
+    {
+    	tmp = (ListSector*) calloc(1, sizeof(ListSector));
+	tmp->sector = (Sector*) calloc(1, sizeof(Sector));
+	tmp->next = b->sectors;
+    	b->sectors = tmp;
+    }
+
+
+    if(create==0) // set disk
+    {
+	    	
+    }
+    else // read exist disk
+    {
+    	i=0; // first block for get super block
+
+	tmp = b->sectors;
+    	while (tmp!=NULL)
+	{ 
+    		Disk_Read(i, tmp->sector->data); // read sector
+		tmp = tmp->next;
+		i++;
+	}
+
+	for(i=0; i<6; i++)
+		if(TYPE_FILESYSTEM[i]!=b->sectors->sector->data[i])
+		{
+			printf("File system not exactly!!");
+			osErrno = E_GENERAL;
+			return -1;
+		}
+
+	printf("Funziona");
+    }
+
+    printf("Non funziona");
 
     return 0;
 }

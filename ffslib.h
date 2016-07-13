@@ -55,7 +55,7 @@ int Dir_Unlink(char *path);
 ////////////////////////////////////////////////////////////////////////
 
 // GLOBAL VARIABLES
-#define TYPE_FILESYSTEM '0x1717'
+#define TYPE_FILESYSTEM "0x1717"
 #define DIM_BLOCK 1024
 #define MAX_BLOCK_FILE 32
 #define MAX_FILENAME_LEN 16
@@ -68,7 +68,13 @@ int Dir_Unlink(char *path);
 // list of sectors
 typedef struct _listSector {
 	Sector* sector;
-	(struct _listSector)* next;
+	struct _listSector* next;
+} ListSector;
+
+// block structur
+typedef struct _block {
+	ListSector* sectors;
+	int nCharWrite;
 } Block;
 
 // inode structure
@@ -83,11 +89,16 @@ typedef struct _inode {
 // list of inodes
 typedef struct _inodeList {
 	Inode* inode;
-	(struct _inodeList)* next;
+	struct _inodeList* next;
 } InodeList;
 
+typedef struct _bootBlock {
+	char* typeFS;
+	int* startGroupsBlock;
+} BootBlock;
+
 // group descriptor structure
-typdef struct _groupDescriptor {
+typedef struct _groupDescriptor {
 	int index;
 	int rangeBlockStart;
 	int rangeBlockEnd;
@@ -121,7 +132,7 @@ typedef struct _directory {
 
 // open file table
 typedef struct _table {
-	File[MAX_FILE_OPEN] fileOpen;
+	File fileOpen[MAX_FILE_OPEN];
 } OpenFileTable;
 
 
