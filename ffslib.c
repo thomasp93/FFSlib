@@ -68,7 +68,7 @@ int FS_Init(char *path) {
 				nC+=INDEX_SIZE;
 			}
 			i=0;
-			while(nC==(nS*SECTOR_SIZE) && g<nGroups) // insert char to char into sector while it's full
+			while(nC<(nS*SECTOR_SIZE) && g<nGroups) // insert char to char into sector while it's full
 			{
 				snprintf(buff, INDEX_SIZE, "%04d", bb->startGroupsBlock[g]);
 				strcat(s, &buff[i]);
@@ -86,7 +86,7 @@ int FS_Init(char *path) {
 			Disk_Write(nS-1, b->sectors->sector->data); // write the sector of the block into the disk
 			nS++;
 			tmp=tmp->next; // pass to the next sector
-			s=(char*) malloc(SECTOR_SIZE*sizeof(char)); // create a char array lenght as the sector
+			s=(char*) calloc(1,SECTOR_SIZE*sizeof(char)); // create a char array lenght as the sector
 		}
 
 		// set all the super blocks and rispective group blocks
@@ -109,34 +109,34 @@ int FS_Init(char *path) {
 			strcpy(s, TYPE_FILESYSTEM);
 			Disk_Write(bb->startGroupsBlock[i], s); // write the super block
 
-			snprintf(buff, INDEX_SIZE, "%d", i); // index of group
+			snprintf(buff, INDEX_SIZE, "%04d", i); // index of group
 			strcpy(c, buff);
 			
-			snprintf(buff, INDEX_SIZE, "0%d", bb->startGroupsBlock[i]);
+			snprintf(buff, INDEX_SIZE, "%04d", bb->startGroupsBlock[i]);
 			strcat(c, buff); // begin index of group
 			
 			if(bb->startGroupsBlock[i]+DIM_BLOCK-1 > NUM_SECTORS/DIM_BLOCK)
-				snprintf(buff, INDEX_SIZE, "0%d", NUM_SECTORS/DIM_BLOCK);
+				snprintf(buff, INDEX_SIZE, "%04d", NUM_SECTORS/DIM_BLOCK);
 			else
-				snprintf(buff, INDEX_SIZE, "0%d", bb->startGroupsBlock[i]+DIM_BLOCK-1);
+				snprintf(buff, INDEX_SIZE, "%04d", bb->startGroupsBlock[i]+DIM_BLOCK-1);
 			strcat(c, buff); // end index of group
 
-			snprintf(buff, INDEX_SIZE, "0%d", bb->startGroupsBlock[i]+3);
+			snprintf(buff, INDEX_SIZE, "%04d", bb->startGroupsBlock[i]+3);
 			strcat(c, buff); // index of inode bitmap
 
-			snprintf(buff, INDEX_SIZE, "0%d", bb->startGroupsBlock[i]+2);
+			snprintf(buff, INDEX_SIZE, "%04d", bb->startGroupsBlock[i]+2);
 			strcat(c, buff); // index of data block bitmap
 
-			snprintf(buff, INDEX_SIZE, "0%d", i*20);
+			snprintf(buff, INDEX_SIZE, "%04d", i*20);
 			strcat(c, buff); // begin index of range inode table
 
-			snprintf(buff, INDEX_SIZE, "0%d", (i+1)*20-1);
+			snprintf(buff, INDEX_SIZE, "%04d", (i+1)*20-1);
 			strcat(c, buff); // end index of range inode table
 
-			snprintf(buff, INDEX_SIZE, "0%d", 20);
+			snprintf(buff, INDEX_SIZE, "%04d", 20);
 			strcat(c, buff); // inode free
 
-			snprintf(buff, INDEX_SIZE, "0%d", DIM_GROUP-DIM_INODE_TABLE-4);
+			snprintf(buff, INDEX_SIZE, "%04d", DIM_GROUP-DIM_INODE_TABLE-4);
 			strcat(c, buff); // data block free
 
 			strcpy(s, c); // copy the string c into the string lenght as the sector
@@ -250,7 +250,91 @@ int File_Unlink(char *file) {
 ////////////////////////////////////////////////////////////////////////
 
 int Dir_Create(char *path) {
+	Sector* sector = (Sector*) calloc(1, sizeof(Sector));
+	char* buff, subString;
+	int i, c, position;
+	
     printf("Dir_Create %s\n", path);
+
+	// creation a directory
+	Inode* dir = (Inode*) calloc(1, sizeof(Inode));
+	dir->type = "d";
+	strcpy(dir->name, name);
+	
+	snprintf(buff, 6, "%06d", 0);
+	strcpy(dir->size, buff);
+
+	dir->blocks = (Block*) calloc(MAX_BLOCK_FILE, sizeof(Block));
+	
+	// save the inode into the inode table
+	BootBlock* bb = (BootBlock*) calloc(1, sizeof(BootBlock)); // create boot block
+	bb->typeFS = TYPE_FILESYSTEM; // set the type of fs
+	bb->startGroupsBlock = (int*) malloc(nGroups*sizeof(int)); // set the begin index of groups
+	position = strlen(bb->typeFS); // set the position
+	for(i=0; i<nGroups; i++) // load the index of groups
+	{
+		Disk_Read(0, sector->data); // read sector of boot block
+		subString = (char*) malloc(INDEX_SIZE*sizeof(char)); // create subString
+		while(c<INDEX_SIZE)
+		{
+			sub[c] = sector->data[position+c-1]; // read a char into the sector in position 
+			c++; // increment c
+		}
+		sub[c] = "\0";
+		bb->startGroupsBlock[i] = atoi(sub); // convert the string in a int
+	}
+
+	GroupDescriptor* gd = (GroupDescriptor*) malloc(sizeof(GroupDescriptor)); // load the group descriptor
+	i=0; // reset index i
+	do
+	{
+		Disk_Read(bb->startGroupsBlock[i]+1*(DIM_BLOCK/SECTOR_SIZE), sector->data); // read the group descriptor of the visit group
+		position=28; // position of begin index of nInodeFree
+		subString = (char*) malloc(INDEX_SIZE*sizeof(char)); // create subString
+		while(c<INDEX_SIZE)
+		{
+			sub[c] = sector->data[position+c-1]; // read a char into the sector in position 
+			c++; // increment c
+		}
+		sub[c] = "\0";
+		gd->nInodeFree = atoi(sub); // convert the string in a int
+		i++;
+	} while(gd->nInodeFree>0 && i<nGroups); // find the group with inode free
+
+	if(!(i<nGroups)) // if not exist inode free
+	{
+		osErrno = E_CREATE;
+		return -1;
+	}
+
+	// else exist inode free
+	i--; // deincrement index
+	Disk_Read(bb->startGroupsBlock[i]+3*(DIM_BLOCK/SECTOR_SIZE), sector->data); // read bitmap inode
+	while(c!=NULL && indexInode<20) // while c is not equals to 0 and index inode is less than number inode into the inode table
+	{
+		c = sector->data[indexInode]; // read index inode char
+		indexInode++; // increment index
+	}
+
+	if(indexInode>=20) // if not exist inode free
+	{
+		osErrno = E_CREATE;
+		return -1;
+	}
+
+	// else I found the index of free inode
+	indexInode--; // set the true index
+	sector->data[indexInode] = "1"; // set the inode as busy
+	Disk_Write(bb->startGroupsBlock[i]+3*(DIM_BLOCK/SECTOR_SIZE), sector->data); // write the edit sector into the disk
+
+	// write the inode into the inode table
+	indexSector = (int)indexInode*150/SECTOR_SIZE; // index of sector into the inode table
+	indexInode = (int)indexInode-SECTOR_SIZE*indexSector; // recalculate the index of inode
+
+	
+	
+	
+    
     return 0;
 }
 

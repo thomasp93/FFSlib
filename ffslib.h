@@ -80,10 +80,10 @@ typedef struct _block {
 
 // inode structure
 typedef struct _inode {
-	int type; // file or directory type
-	char name[MAX_FILENAME_LEN]; // name of directory or file
-	int size; // size Byte
-	Block blocks[MAX_BLOCK_FILE]; // blocks of data that contains the information of inode
+	char* type; // file or directory type
+	char* name[MAX_FILENAME_LEN]; // name of directory or file
+	char* size[6]; // size Byte
+	Block* blocks[MAX_BLOCK_FILE]; // blocks of data that contains the information of inode
 } Inode;
 
 // inode list structure
