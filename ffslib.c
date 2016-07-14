@@ -51,7 +51,7 @@ int FS_Init(char *path) {
 		bb->startGroupsBlock = (int*) calloc(nGroups, sizeof(int));
 		
 		for (i=0; i<nGroups; i++)
-			bb->startGroupsBlock[i] = 1+i*DIM_GROUP; // calculate the idex of group
+			bb->startGroupsBlock[i] = (1+i*DIM_GROUP)*(DIM_GROUP*DIM_BLOCK); // calculate the idex of group
 
 		s = (char*) calloc(1, SECTOR_SIZE*sizeof(char));
 		strcat(s, bb->typeFS);
