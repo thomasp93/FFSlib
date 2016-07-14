@@ -3,6 +3,7 @@
 
 // global errno value here
 int osErrno;
+static int nGroups=(SECTOR_SIZE*NUM_SECTORS)/(DIM_BLOCK*DIM_GROUP);
 ////////////////////////////////////////////////////////////////////////
 // funzione che crea il tutto, va chiamata una volta sola all'inizio
 int FS_Init(char *path) {
@@ -13,7 +14,9 @@ int FS_Init(char *path) {
 	char* s;
 	char* c;
 	char buff[INDEX_SIZE];
-    int create, nGroups=(SECTOR_SIZE*NUM_SECTORS)/(DIM_BLOCK*DIM_GROUP), i, nC=0, g=0, nS=1;
+    int create;
+    
+    int i, nC=0, g=0, nS=1;
     
     printf("FS_Init %s\n", path);
 
@@ -339,6 +342,7 @@ int Dir_Create(char *path) {
 }
 
 int Dir_Size(char *path) {
+
     printf("Dir_Size\n");
     return 0;
 }
@@ -349,6 +353,27 @@ int Dir_Read(char *path, void *buffer, int size) {
 }
 
 int Dir_Unlink(char *path) {
+    char* buffer[1024];
+    char* tmp;
+    Disk_Read((DIM_BLOCK/SECTOR_SIZE*1*2), tmp);
+    strcat(buffer, tmp);
+    Disk_Read((DIM_BLOCK/SECTOR_SIZE*1*2)+1, tmp);
+    strcat(buffer, tmp);
+    tmp = (char *) calloc(5, sizeof(char));
+    i=30;
+    while(i<35){
+    	tmp[i-30]= buffer[i];
+    	i++;
+    }
+    int indexinodeT = atoi(tmp);
+    char* inodeinfo = (char*) calloc(150, sizeof(char));
+    bzero(buffer, 512);
+    Disk_Read(indexinodeT*(DIM_BLOCK/SECTOR_SIZE), buffer);
+    i=0;
+    while (i<150){
+    	inodeinfo[i] = buffer[i];
+    }
+    
     printf("Dir_Unlink\n");
     return 0;
 }
