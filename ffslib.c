@@ -11,37 +11,37 @@ int FS_Init(char *path) {
 	Block* tmp; // temporary block
 	Sector* sector;
 	char* s; // temporary string
-    int i, create, noChar=0, noSectorVisited=1;
+    	int i, create, noChar=0, noSectorVisited=1;
     
-    printf("FS_Init %s\n", path);
+    	printf("FS_Init %s\n", path);
 
-    // open disk
-    if (Disk_Load(path) == -1) { // load the disk with error
-    	if (diskErrno == E_OPENING_FILE) // if the disk not exist
+	// open disk
+	if (Disk_Load(path) == -1) { // load the disk with error
+		if (diskErrno == E_OPENING_FILE) // if the disk not exist
 			create = 0; // set variable for set a default disk
 		else { // other error of the load disk
 			printf("Disk_Load(*path) failed\n");
 			osErrno = E_GENERAL;
 			return -1;
 		}
-    }
-    else create = 1; // disk load correctly
+	}
+	else create = 1; // disk load correctly
 
-    // create data-structure to handle files and directories
-    
-    // set a default block
-    block->sector = NULL;
+	// create data-structure to handle files and directories
 
-    for(i=0; i<DIM_BLOCK/SECTOR_SIZE; i++) // creation list sector
-    {
-    	tmp = (Block*) calloc(1, sizeof(Block));
+	// set a default block
+	block->sector = NULL;
+
+	for(i=0; i<DIM_BLOCK/SECTOR_SIZE; i++) // creation list sector
+	{
+		tmp = (Block*) calloc(1, sizeof(Block));
 		tmp->sector = (Sector*) calloc(1, sizeof(Sector));
 		tmp->next = block->sector;
-    	block->sector = tmp;
-    }
+		block->sector = tmp;
+	}
 
-    if(create==0) // set disk
-    {
+    	if(create==0) // set disk
+    	{
 		s = (char*) calloc(1, SECTOR_SIZE*sizeof(char));
 		strcat(s, TYPE_FILESYSTEM);
 		noChar += strlen(s);
@@ -71,15 +71,15 @@ int FS_Init(char *path) {
 			Disk_Write(i, sector->data);
 
 		Dir_Create("/"); // create the root directory
-    }
-    else // read exist disk
-    {
-    	i=0; // first block for get super block
+    	}
+    	else // read exist disk
+    	{
+    		i=0; // first block for get super block
 
 		tmp = block->sector;
-    	while (tmp!=NULL)
+    		while (tmp!=NULL)
 		{ 
-    		Disk_Read(i, tmp->sector->data); // read sector
+    			Disk_Read(i, tmp->sector->data); // read sector
 			tmp = tmp->next;
 			i++;
 		}
@@ -100,17 +100,17 @@ int FS_Init(char *path) {
 }
 
 int FS_Sync(char* diskname){
-    int i=0;
-    while(i < MAX_FILE_OPEN){
-        File_Close(i);
-        i++;
-    }
+	int i=0;
+	while(i < MAX_FILE_OPEN){
+        	File_Close(i);
+        	i++;
+	}
     
-    if(Disk_Save(diskname) == -1){
-        return -1;
-    } else {
-        return 0;
-    } 
+	if(Disk_Save(diskname) == -1){
+	        return -1;
+	} else {
+	        return 0;
+	} 
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -118,43 +118,43 @@ int FS_Sync(char* diskname){
 ////////////////////////////////////////////////////////////////////////
 
 int File_Create(char *file) {
-    printf("FS_Create\n");
-    return 0;
+	printf("FS_Create\n");
+	return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////
 
 int File_Open(char *file) {
-    printf("FS_Open\n");
-    return 0;
+	printf("FS_Open\n");
+	return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////
 
 int File_Read(int fd, void *buffer, int size) {
-    printf("FS_Read\n");
-    return 0;
+	printf("FS_Read\n");
+	return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////
 
 int File_Write(int fd, void *buffer, int size) {
-    printf("FS_Write\n");
-    return 0;
+	printf("FS_Write\n");
+	return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////
 
 int File_Seek(int fd, int offset) {
-    int newiopointer = openFiles->fileOpen[fd]->iopointer + offset; // calculate the new io pointer
-    
-    if (newiopointer > atoi(openFiles->fileOpen[fd]->info->size) || newiopointer < 0) //verify that the iopointer does not cross the file bounds
-    {
-        osErrno = E_SEEK_OUT_OF_BOUNDS;
-        return -1;
-    }
-    
-    openFiles->fileOpen[fd]->iopointer = newiopointer;
+	int newiopointer = openFiles->fileOpen[fd]->iopointer + offset; // calculate the new io pointer
+
+	if (newiopointer > atoi(openFiles->fileOpen[fd]->info->size) || newiopointer < 0) //verify that the iopointer does not cross the file bounds
+	{
+		osErrno = E_SEEK_OUT_OF_BOUNDS;
+		return -1;
+	}
+
+	openFiles->fileOpen[fd]->iopointer = newiopointer;
 	printf("FS_Seek\n");
 	return 0;   
 }
@@ -162,15 +162,15 @@ int File_Seek(int fd, int offset) {
 ////////////////////////////////////////////////////////////////////////
 
 int File_Close(int fd) {
-    printf("FS_Close\n");
-    return 0;
+	printf("FS_Close\n");
+	return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////
 
 int File_Unlink(char *file) {
-    printf("FS_Unlink\n");
-    return 0;
+	printf("FS_Unlink\n");
+	return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -180,99 +180,123 @@ int File_Unlink(char *file) {
 int Dir_Create(char *path) {
 	Sector* sector = (Sector*) calloc(1, sizeof(Sector));
 	char* buff, subString;
-	int i, c, position, indexSector, indexInode;
+	int i, c, position, indexSector, indexInode, noChar;
 	
-    printf("Dir_Create %s\n", path);
+    	printf("Dir_Create %s\n", path);
+	
+	// save the inode into the inode table
+	for(i=0; i<BLOCK_SIZE/SECTOR_SIZE; i++) // visit the inode bitmap
+	{
+		indexInode=0;
+		Disk_Read(DIM_BLOCK/SECTOR_SIZE+i, sector->data); // read bitmap inode
+		while(c!="0" && indexInode<SECTOR_SIZE) // while c is not equals to 0 and index inode is less than number inode into the sector
+		{
+			c = sector->data[indexInode]; // read index inode char
+			indexInode++; // increment index
+		}
+
+		if(c=="0") // find the free inode
+			break; // exit from for
+	}
+
+	if(c!="0") // if not exist inode free
+	{
+		osErrno = E_CREATE;
+		return -1;
+	}
+	else
+		indexInode -= 1; // correct the more increment of index
+
+	// else I found the index of free inode
+	indexInode += i*SECTOR_SIZE; // calculate the true value of free index inode
+	sector->data[indexInode] = "1"; // set the inode as busy
+	Disk_Write(BLOCK_SIZE/SECTOR_SIZE+i, sector->data); // write the edit sector into the disk
+
+	// write the inode into the inode table
+	indexBlock = (int)indexInode*sizeof(Inode)/BLOCK_SIZE+3; // calculate the index of block
+	indexSector = (int)indexInode*sizeof(Inode)/SECTOR_SIZE+indexBlock*BLOCK_SIZE/SECTOR_SIZE; // index of sector into the inode table
+	indexInode = (int)(indexInode*sizeof(Inode))%SECTOR_SIZE; // recalculate the index of inode into the inode table
+
+	// TODO add the inode index into the inode dad and take the name of directory
 
 	// creation a directory
 	Inode* dir = (Inode*) calloc(1, sizeof(Inode));
 	dir->type = "d"; // set the type as directory
 	strcpy(dir->name, ""); // TODO calculate the name of directory trought the path
 	strcpy(dir->size, "00000"); // set the size of the directory
+
+	Disk_Read(indexSector, sector->data); // read a sector that it contains the free inode
 	
-	// save the inode into the inode table
-	Disk_Read(DIM_BLOCK/SECTOR_SIZE, sector->data); // read bitmap inode
-	while(c!="0" && indexInode<MAX_INODE) // while c is not equals to 0 and index inode is less than number inode into the inode table
-	{
-		c = sector->data[indexInode]; // read index inode char
-		indexInode++; // increment index
-	}
+	noChar=0; // reset the number of char written into the inode block
+	char* inodeInfo = (char*) calloc(1, sizeof(Inode)); // create the inode
 
-	if(indexInode>=20) // if not exist inode free
-	{
-		osErrno = E_CREATE;
-		return -1;
-	}
+	inodeInfo[indexInode+noChar] = dir->type; // write the dir type
+	noChar++;
 
-	// else I found the index of free inode
-	indexInode--; // set the true index
-	sector->data[indexInode] = "1"; // set the inode as busy
-	Disk_Write(bb->startGroupsBlock[i]+3*(DIM_BLOCK/SECTOR_SIZE), sector->data); // write the edit sector into the disk
+	strcpy(inodeInfo+noChar, dir->name);
+	noChar+=MAX_FILENAME_LEN;
 
-	// write the inode into the inode table
-	indexSector = (int)indexInode*150/SECTOR_SIZE; // index of sector into the inode table
-	indexInode = (int)indexInode*150-SECTOR_SIZE*indexSector+20*i; // recalculate the index of inode into the inode table
+	strcpy(inodeInfo+noChar, "00000");
+	noChar+=5;
 
-	Disk_Read(bb->startGroupsBlock[i]+4+indexSector, sector->data); // read a sector that it contains the free inode
-	
-	nC=0; // reset the number of char write into the inode block
-	if(nC==0) // type of inode
-		sector->data[indexInode+nC] = dir->type; // write the dir type
-	else if(nC > 0 && nC < MAX_FILENAME_LEN) // name of directory
-	{
-		strcpy(sector->data+indexInode+nC, dir->name);
-		nC+=MAX_FILENAME_LEN;
-	}
-	else if(nC > MAX_FILENAME_LEN && nC < MAX_FILENAME_LEN+5) // dimension of directory
-	{
-		strcpy(sector->data+indexInode+nC, "00000");
-		nC+=5;
-	}
+	if(indexInode+sizeof(Inode)<SECTOR_SIZE) // if the inode is less than size free into the inode
+		strcpy(sector->data+indexInode, inodeInfo); // write the inode into the sector
 	else
-		while(nC<150) // while the inode sector is full
+	{
+		for(i=0, noChar=indexInode; i<sizeof(Inode); i++, noChar++)
 		{
-			sector->data[indexInode+nC] = "0"; // set 0 
-			nC++;
+			if(i+indexInode<SECTOR_SIZE) // if the sector is full
+			{
+				Disk_Write(indexSector, sector->data); // write the first sector
+				indexSector++; // increment the sector
+				Disk_Read(indexSector, sector->data); // read the new sector
+				noChar = 0; // reset the number char written
+			}
+
+			sector->data[noChar] = inodeInfo[i]; // write the char into the sector
 		}
-	
-	Disk_Write(bb->startGroupsBlock[i]+4+indexSector, sector->data); // write the new sector with the new inode
+	}
+
+	Disk_Write(indexSector, sector->data); // write the sector into the disk
     
-    return 0;
+    	return 0;
 }
 
 int Dir_Size(char *path) {
-
-    printf("Dir_Size\n");
-    return 0;
+	printf("Dir_Size\n");
+	return 0;
 }
 
 int Dir_Read(char *path, void *buffer, int size) {
-    printf("Dir_Read\n");
-    return 0;
+	printf("Dir_Read\n");
+	return 0;
 }
 
 int Dir_Unlink(char *path) {
-    char* buffer[1024];
-    char* tmp;
-    Disk_Read((DIM_BLOCK/SECTOR_SIZE*1*2), tmp);
-    strcat(buffer, tmp);
-    Disk_Read((DIM_BLOCK/SECTOR_SIZE*1*2)+1, tmp);
-    strcat(buffer, tmp);
-    tmp = (char *) calloc(5, sizeof(char));
-    i=30;
-    while(i<35){
-    	tmp[i-30]= buffer[i];
-    	i++;
-    }
-    int indexinodeT = atoi(tmp);
-    char* inodeinfo = (char*) calloc(150, sizeof(char));
-    bzero(buffer, 512);
-    Disk_Read(indexinodeT*(DIM_BLOCK/SECTOR_SIZE), buffer);
-    i=0;
-    while (i<150){
-    	inodeinfo[i] = buffer[i];
-    }
-    
-    printf("Dir_Unlink\n");
-    return 0;
+	char* buffer[1024];
+	char* tmp;
+
+	// TODO search granfather and dad for remove the inode of the directory
+
+	Disk_Read(3*DIM_BLOCK/SECTOR_SIZE, tmp);
+	strcat(buffer, tmp);
+	Disk_Read((DIM_BLOCK/SECTOR_SIZE*1*2)+1, tmp);
+	strcat(buffer, tmp);
+	tmp = (char *) calloc(5, sizeof(char));
+	i=30;
+	while(i<35){
+		tmp[i-30]= buffer[i];
+		i++;
+	}
+	int indexinodeT = atoi(tmp);
+	char* inodeinfo = (char*) calloc(150, sizeof(char));
+	bzero(buffer, 512);
+	Disk_Read(indexinodeT*(DIM_BLOCK/SECTOR_SIZE), buffer);
+	i=0;
+	while (i<150){
+	inodeinfo[i] = buffer[i];
+	}
+
+	printf("Dir_Unlink\n");
+	return 0;
 }

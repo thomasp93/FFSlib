@@ -74,10 +74,10 @@ typedef struct _listSector {
 
 // inode structure
 typedef struct _inode {
-	char* type; // file or directory type
-	char* name[MAX_FILENAME_LEN]; // name of directory or file
-	char* size[MAX_FILE_SIZE_LEN]; // size Byte
-	char* blocks[MAX_BLOCK_FILE]; // blocks of data that contains the information of inode
+	char type; // file or directory type
+	char name[MAX_FILENAME_LEN]; // name of directory or file
+	char size[MAX_FILE_SIZE_LEN]; // size Byte
+	char blocks[MAX_BLOCK_FILE*INDEX_SIZE]; // blocks of data that contains the information of inode
 } Inode;
 
 // group structure
