@@ -264,11 +264,121 @@ int Dir_Create(char *path) {
 
 int Dir_Size(char *path) {
 	printf("Dir_Size\n");
+	const char del[2] = "/";
+	char* dadPath;
+	char* token, next;
+	
+	token = strtok(path, del);
+	token = strtok(NULL, del);
+	next = strtok(NULL, del);
+
+	while (next != NULL)
+	{
+		strcat(dadPath, "/");
+		strcat(dadPath, token);
+		token = next;
+		next = strtok(NULL, del); // read the next token
+	}
+
+	Dir_Read(dadPath, (void*) buff, )
+	
 	return 0;
 }
 
 int Dir_Read(char *path, void *buffer, int size) {
 	printf("Dir_Read\n");
+	Sector* sector = (Sector*) calloc(1, sizeof(Sector));
+	Inode* dadInode = (Inode*) calloc(1, sizeof(Inode));
+	Inode* sonInode = (Inode*) calloc(1, sizeof(Inode));
+	char* token, buff;
+	char* sons;
+	char son[MAX_FILENAME_LEN+INDEX_SIZE];
+	int posCharStart=0, i, indexBlock, indexSector, indexInode, noChar;
+
+	if (sizeof(path)>MAX_PATHNAME_LEN) // control the path length
+		return -1;
+
+	token = strtok(path, "/"); // divide the path
+	indexInode = 0;
+
+	while (token != NULL) // finchè ho token
+	{
+		indexBlock = (int)indexInode*sizeof(Inode)/BLOCK_SIZE+3; // calculate the index of block
+		indexSector = (int)indexInode*sizeof(Inode)/SECTOR_SIZE+indexBlock*BLOCK_SIZE/SECTOR_SIZE; // index of sector into the inode table
+
+		Disk_Read(indexSector, sector->data); // charge the sector
+		// read the inode
+		snprintf(dadInode->type, 1, sector->data+posCharStart); // read the type of inode
+		posCharStart+=1; // add the char readden
+		snprintf(dadInode->name, MAX_FILENAME_LEN, sector->data+posCharStart); // read the name of file (directory)
+		posCharStart+=MAX_FILENAME_LEN;
+		snprintf(dadInode->size, MAX_FILE_SIZE_LEN, sector->data+posCharStart); // read the size of file (directory)
+		posCharStart+=MAX_FILE_SIZE_LEN;
+		snprintf(dadInode->blocks, MAX_BLOCK_FILE*INDEX_SIZE, sector->data+posCharStart); // read all block of inode
+
+		i = 0;
+		while (i<atoi(dadInode->size) && strcmp(sonInode->name, token)!=0) // while visit the all inode or found the directory
+		{
+			snprintf(buff, INDEX_SIZE, dadInode->blocks+i*INDEX_SIZE); // read the index
+			indexInode = atoi(buff); // convert the index
+
+			Disk_Read(indexSector, sector->data); // charge the sector
+			// read the son inode
+			posCharStart=0;
+			snprintf(sonInode->type, 1, sector->data+posCharStart); // read the type of inode
+			posCharStart+=1; // add the char readden
+			snprintf(sonInode->name, MAX_FILENAME_LEN, sector->data+posCharStart); // read the name of file (directory)
+			posCharStart+=MAX_FILENAME_LEN;
+			snprintf(sonInode->size, MAX_FILE_SIZE_LEN, sector->data+posCharStart); // read the size of file (directory)
+			posCharStart+=MAX_FILE_SIZE_LEN;
+			snprintf(sonInode->blocks, MAX_BLOCK_FILE*INDEX_SIZE, sector->data+posCharStart); // read all block of inode
+
+			i+=INDEX_SIZE;
+		}
+
+		if (strcmp(sonInode->name, token)!=0) // if not found the directory
+		{
+			return -1; // return an error
+		}
+		else // if found it
+		{
+			dadInode = sonInode; // change the inode
+			token = strtok(NULL, "/"); // charge the new token
+		}
+	}
+
+	// found the directory inode
+	sons = (char*) calloc(1, dadInode->size/INDEX_SIZE*(MAX_FILENAME_LEN+INDEX_SIZE)); // create the buffer for sons
+	i = 0;
+	while (i*INDEX_SIZE<atoi(dadInode->size)) // visit all inode
+	{
+		snprintf(buff, INDEX_SIZE, dadInode->blocks+i*INDEX_SIZE); // read the index
+		indexInode = atoi(buff); // convert the index
+
+		Disk_Read(indexSector, sector->data); // charge the sector
+		// read the son inode
+		posCharStart=0;
+		snprintf(sonInode->type, 1, sector->data+posCharStart); // read the type of inode
+		posCharStart+=1; // add the char readden
+		snprintf(sonInode->name, MAX_FILENAME_LEN, sector->data+posCharStart); // read the name of file (directory)
+		posCharStart+=MAX_FILENAME_LEN;
+		snprintf(sonInode->size, MAX_FILE_SIZE_LEN, sector->data+posCharStart); // read the size of file (directory)
+		posCharStart+=MAX_FILE_SIZE_LEN;
+		snprintf(sonInode->blocks, MAX_BLOCK_FILE*INDEX_SIZE, sector->data+posCharStart); // read all block of inode
+
+		for (noChar=0; noChar<MAX_FILENAME_SIZE+INDEX_SIZE; noChar++) // write all bytes
+			if(noChar<sizeof(sonInode->name))
+				son[noChar] = sonInode->name[noChar]; // write the name of the son
+			else if(noChar>MAX_FILENAME_SIZE)
+				son[noChar] = buff[noChar-MAX_FILENAME_SIZE]; // write the index inode
+			else
+				son[noChar] = '0'; // write 0
+
+		sons[i] = son; // copy the son
+
+		i++;
+	}
+
 	return 0;
 }
 
