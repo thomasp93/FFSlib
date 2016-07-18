@@ -194,8 +194,8 @@ int Dir_Create(char *path) {
 		Disk_Read(DIM_BLOCK/SECTOR_SIZE+i, sector->data); // read bitmap inode
 		while(c!="0" && indexInode<SECTOR_SIZE) // while c is not equals to 0 and index inode is less than number inode into the sector
 		{
-			c = sector->data[indexInode]; // read index inode char
-			indexInode++; // increment index
+			c = sector->data[indexInodeSon]; // read index inode char
+			indexInodeSon++; // increment index
 		}
 
 		if(c=="0") // find the free inode
@@ -208,50 +208,117 @@ int Dir_Create(char *path) {
 		return -1;
 	}
 	else
-		indexInode -= 1; // correct the more increment of index
+		indexInodeSon -= 1; // correct the more increment of index
 
 	// else I found the index of free inode
-	indexInode += i*SECTOR_SIZE; // calculate the true value of free index inode
-	sector->data[indexInode] = "1"; // set the inode as busy
+	indexInodeSon += i*SECTOR_SIZE; // calculate the true value of free index inode
+	sector->data[indexInodeSon] = "1"; // set the inode as busy
 	Disk_Write(BLOCK_SIZE/SECTOR_SIZE+i, sector->data); // write the edit sector into the disk
 
 	// write the inode into the inode table
-	indexBlock = (int)indexInode*sizeof(Inode)/BLOCK_SIZE+3; // calculate the index of block
-	indexSector = (int)indexInode*sizeof(Inode)/SECTOR_SIZE+indexBlock*BLOCK_SIZE/SECTOR_SIZE; // index of sector into the inode table
-	indexInode = (int)(indexInode*sizeof(Inode))%SECTOR_SIZE; // recalculate the index of inode into the inode table
+	indexBlock = (int)indexInodeSon*sizeof(Inode)/BLOCK_SIZE+3; // calculate the index of block
+	indexSector = (int)indexInodeSon*sizeof(Inode)/SECTOR_SIZE+indexBlock*BLOCK_SIZE/SECTOR_SIZE; // index of sector into the inode table
+	indexInode = (int)(indexInodeSon*sizeof(Inode))%SECTOR_SIZE; // recalculate the index of inode into the inode table
 
-	// TODO add the inode index into the inode dad and take the name of directory
 	// take the granfather's path
 	granfather = strtok(path, "/");
-	dad = strtok(NULL, "/");
-	son = strtok(NULL, "/");
-	next = strtok(NULL, "/");
 
-	while (next != NULL)
+	if (granfather != NULL) // root case /
 	{
-		strcat(dadPath, "/");
-		strcat(dadPath, token);
-		token = next;
-		next = strtok(NULL, "/"); // read the next token
-	}
+		dad = strtok(NULL, "/");
 
-	sons = (void*) calloc(1, size);
+		if (dad != NULL) // /home/thomas gran=home dad=thomas
+		{
+			strcat(granPath, "/"); // /
 
-	if (Dir_Read(dadPath, sons, size)!=0)
-		return -1;
+			son = strtok(NULL, "/");
 
-	// search the dad's inode
-	// read dad inode
-	// add the son's inode
+			if (son != NULL) // /home/thomas/Scrivania gran=home dad=thomas son=Scrivania
+			{
+				strcat(granPath, gran); // /home
 
+				next = strtok(NULL, "/"); // /home/thomas/Scrivania/pippo gran=home dad=thomas son=Scrivania next=pippo
 
+				while (next != NULL)
+				{
+					gran = dad;
+					dad = son;
+					son = next;
+					strcat(granPath, "/");
+					strcat(granPath, gran);
+					next = strtok(NULL, "/"); // read the next token
+				}
+			}
 
+			sons = (void*) calloc(1, size);
+			if (Dir_Read(granPath, sons, MAX_BLOCK_FILE*(INDEX_SIZE+MAX_FILENAME_LEN)) != 0)
+				return -1;
 
+			indexInodeDad = atoi(strstr(sons, dad)+MAX_FILENAME_LEN); // find the dad's inode
+		}
+		else // /home
+			indexInodeDad = 0; // dad inode found
+
+		indexBlock = (int)indexInodeDad*sizeof(Inode)/BLOCK_SIZE+3; // calculate the index of block
+		indexSector = (int)indexInodeDad*sizeof(Inode)/SECTOR_SIZE+indexBlock*BLOCK_SIZE/SECTOR_SIZE; // index of sector into the inode table
+		indexInode = (int)(indexInodeDad*sizeof(Inode))%SECTOR_SIZE; // recalculate the index of inode into the inode table
+
+		Disk_Read(indexSector, sector->data);
+		strcpy(block, sector->data);
+	
+		if (indexInode+sizeof(Inode)>SECTOR_SIZE)
+		{
+			Disk_Read(indexSector+1, sector->data);
+			strcat(block, sector->data);
+		}	
+
+		// read the dad's inode
+		posCharStart=indexInode;
+		snprintf(dadInode->type, 1, block+posCharStart); // read the type of inode
+		posCharStart+=1; // add the char readden
+		snprintf(dadInode->name, MAX_FILENAME_LEN, block+posCharStart); // read the name of file (directory)
+		posCharStart+=MAX_FILENAME_LEN;
+		snprintf(dadInode->size, MAX_FILE_SIZE_LEN, block+posCharStart); // read the size of file (directory)
+		posCharStart+=MAX_FILE_SIZE_LEN;
+		snprintf(dadInode->blocks, MAX_BLOCK_FILE*INDEX_SIZE, block+posCharStart); // read all block of inode
+
+		snprintf(buff, INDEX_SIZE, "%04d", indexInodeSon);
+		strcat(dadInode->blocks+atoi(dadInode->size), buff); // copy the index son into the dad's block
+
+		snprintf(dadInode->size, MAX_FILE_SIZE_LEN, "%05d", atoi(dadInode->size)+INDEX_SIZE); // edit the size of dad's inode
+
+		char* inodeInfo = (char*) calloc(1, sizeof(Inode)); // create the inode
+
+		strcat(inodeInfo, dadInode->type);
+		strcat(inodeInfo, dadInode->name);
+		strcat(inodeInfo, dadInode->size);
+		strcat(inodeInfo, dadInode->blocks);
+
+		if(indexInode+sizeof(Inode)<SECTOR_SIZE) // if the inode is less than size free into the inode
+			strcpy(sector->data+indexInode, inodeInfo); // write the inode into the sector
+		else
+		{
+			for(i=0, noChar=indexInode; i<sizeof(Inode); i++, noChar++)
+			{
+				if(i+indexInode<SECTOR_SIZE) // if the sector is full
+				{
+					Disk_Write(indexSector, sector->data); // write the first sector
+					indexSector++; // increment the sector
+					Disk_Read(indexSector, sector->data); // read the new sector
+					noChar = 0; // reset the number char written
+				}
+
+				sector->data[noChar] = inodeInfo[i]; // write the char into the sector
+			}
+		}
+
+		Disk_Write(indexSector, sector->data); // write the sector into the disk
+	} // end root case
 
 	// creation a directory
 	Inode* dir = (Inode*) calloc(1, sizeof(Inode));
 	dir->type = "d"; // set the type as directory
-	strcpy(dir->name, ""); // TODO calculate the name of directory trought the path
+	strcpy(dir->name, son); // copy the name of directory
 	strcpy(dir->size, "00000"); // set the size of the directory
 
 	Disk_Read(indexSector, sector->data); // read a sector that it contains the free inode
@@ -304,15 +371,20 @@ int Dir_Size(char *path) {
 		return -1;
 
 	token = strtok(path, "/");
-	next = strtok(NULL, "/");
-
-	while (next != NULL)
+	if (token != NULL)
 	{
-		strcat(dadPath, "/");
-		strcat(dadPath, token);
-		token = next;
-		next = strtok(NULL, "/"); // read the next token
+		next = strtok(NULL, "/");
+
+		while (next != NULL)
+		{
+			strcat(dadPath, "/");
+			strcat(dadPath, token);
+			token = next;
+			next = strtok(NULL, "/"); // read the next token
+		}
 	}
+	else
+		dadPath = "/";
 
 	sons = (void*) calloc(1, size);
 
@@ -335,12 +407,12 @@ int Dir_Size(char *path) {
 	indexSector = (int)indexInode*sizeof(Inode)/SECTOR_SIZE+indexBlock*BLOCK_SIZE/SECTOR_SIZE; // index of sector into the inode table
 	indexInode = (int)(indexInode*sizeof(Inode))%SECTOR_SIZE; // recalculate the index of inode into the inode table
 
-	Disk_Read(indexInode, sector->data);
+	Disk_Read(indexSector, sector->data);
 	strcpy(block, sector->data);
 	
 	if (indexInode+sizeof(Inode)>SECTOR_SIZE)
 	{
-		Disk_Read(indexInode+1, sector->data);
+		Disk_Read(indexSector+1, sector->data);
 		strcat(block, sector->data);
 	}	
 
@@ -382,12 +454,12 @@ int Dir_Read(char *path, void *buffer, int size) {
 		indexSector = (int)indexInode*sizeof(Inode)/SECTOR_SIZE+indexBlock*BLOCK_SIZE/SECTOR_SIZE; // index of sector into the inode table
 		indexInode = (int)(indexInode*sizeof(Inode))%SECTOR_SIZE; // recalculate the index of inode into the inode table
 
-		Disk_Read(indexInode, sector->data);
+		Disk_Read(indexSector, sector->data);
 		strcpy(block, sector->data);
 	
 		if (indexInode+sizeof(Inode)>SECTOR_SIZE)
 		{
-			Disk_Read(indexInode+1, sector->data);
+			Disk_Read(indexSector+1, sector->data);
 			strcat(block, sector->data);
 		}	
 
@@ -408,12 +480,12 @@ int Dir_Read(char *path, void *buffer, int size) {
 		indexSector = (int)indexInode*sizeof(Inode)/SECTOR_SIZE+indexBlock*BLOCK_SIZE/SECTOR_SIZE; // index of sector into the inode table
 		indexInode = (int)(indexInode*sizeof(Inode))%SECTOR_SIZE; // recalculate the index of inode into the inode table
 
-		Disk_Read(indexInode, sector->data);
+		Disk_Read(indexSector, sector->data);
 		strcpy(block, sector->data);
 		
 		if (indexInode+sizeof(Inode)>SECTOR_SIZE)
 		{
-			Disk_Read(indexInode+1, sector->data);
+			Disk_Read(indexSector+1, sector->data);
 			strcat(block, sector->data);
 		}	
 
@@ -437,12 +509,12 @@ int Dir_Read(char *path, void *buffer, int size) {
 			indexSector = (int)indexInode*sizeof(Inode)/SECTOR_SIZE+indexBlock*BLOCK_SIZE/SECTOR_SIZE; // index of sector into the inode table
 			indexInode = (int)(indexInode*sizeof(Inode))%SECTOR_SIZE; // recalculate the index of inode into the inode table
 
-			Disk_Read(indexInode, sector->data);
+			Disk_Read(indexSector, sector->data);
 			strcpy(block, sector->data);
 		
 			if (indexInode+sizeof(Inode)>SECTOR_SIZE)
 			{
-				Disk_Read(indexInode+1, sector->data);
+				Disk_Read(indexSector+1, sector->data);
 				strcat(block, sector->data);
 			}
 
@@ -482,12 +554,12 @@ int Dir_Read(char *path, void *buffer, int size) {
 		indexSector = (int)indexInode*sizeof(Inode)/SECTOR_SIZE+indexBlock*BLOCK_SIZE/SECTOR_SIZE; // index of sector into the inode table
 		indexInode = (int)(indexInode*sizeof(Inode))%SECTOR_SIZE; // recalculate the index of inode into the inode table
 
-		Disk_Read(indexInode, sector->data);
+		Disk_Read(indexSector, sector->data);
 		strcpy(block, sector->data);
 	
 		if (indexInode+sizeof(Inode)>SECTOR_SIZE)
 		{
-			Disk_Read(indexInode+1, sector->data);
+			Disk_Read(indexSector+1, sector->data);
 			strcat(block, sector->data);
 		}
 
