@@ -179,8 +179,10 @@ int File_Unlink(char *file) {
 
 int Dir_Create(char *path) {
 	Sector* sector = (Sector*) calloc(1, sizeof(Sector));
-	char* buff, subString;
-	int i, c, position, indexSector, indexInode, noChar;
+	char* buff, subString, block;
+	char* granfather, dad, son, next, granPath, sons;
+	int i, c, position, indexBlock, indexSector, indexInode, noChar;
+	int indexInodeSon, indexInodeDad, posCharStart;
 
 	if (strlen(path)>MAX_PATHNAME_LEN)
 		return -1;
