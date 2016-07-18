@@ -383,30 +383,24 @@ int Dir_Read(char *path, void *buffer, int size) {
 }
 
 int Dir_Unlink(char *path) {
-	char* buffer[1024];
-	char* tmp;
 
-	// TODO search granfather and dad for remove the inode of the directory
+	Sector* sector = (Sector*) calloc(1, sizeof(Sector));
+	Inode* dadInode = (Inode*) calloc(1, sizeof(Inode));
+	Inode* sonInode = (Inode*) calloc(1, sizeof(Inode));
+	char* token;
+	int indexInode, indexSector, indexBlock;
+	if (sizeof(path)>MAX_PATHNAME_LEN) // control the path length
+		return -1;
 
-	Disk_Read(3*DIM_BLOCK/SECTOR_SIZE, tmp);
-	strcat(buffer, tmp);
-	Disk_Read((DIM_BLOCK/SECTOR_SIZE*1*2)+1, tmp);
-	strcat(buffer, tmp);
-	tmp = (char *) calloc(5, sizeof(char));
-	i=30;
-	while(i<35){
-		tmp[i-30]= buffer[i];
-		i++;
+	token = strtok(path, "/");
+	indexInode=0;
+
+	while(token!=NULL){
+		indexBlock = (int)indexInode*sizeof(Inode)/BLOCK_SIZE+3; // calculate the index of block
+		indexSector = (int)indexInode*sizeof(Inode)/SECTOR_SIZE+indexBlock*BLOCK_SIZE/SECTOR_SIZE; // index of sector into the inode table
+		
 	}
-	int indexinodeT = atoi(tmp);
-	char* inodeinfo = (char*) calloc(150, sizeof(char));
-	bzero(buffer, 512);
-	Disk_Read(indexinodeT*(DIM_BLOCK/SECTOR_SIZE), buffer);
-	i=0;
-	while (i<150){
-	inodeinfo[i] = buffer[i];
-	}
-
+	
 	printf("Dir_Unlink\n");
 	return 0;
 }
