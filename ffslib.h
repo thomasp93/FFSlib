@@ -64,6 +64,10 @@ int Dir_Unlink(char *path);
 #define MAX_INODE 1024
 #define MAX_FILE_SIZE_LEN 5 // lenght of char for file or directory size
 #define INDEX_SIZE 4 // number of address' digit
+#define SUPERBLOCK_INDEX 0
+#define INODE_BITMAP_INDEX 1
+#define DATA_BLOCK_INDEX 2
+
 
 // block structure
 // list of sectors or block
@@ -91,8 +95,8 @@ typedef struct _group {
 
 // file structure
 typedef struct _file {
-	int fileDescriptor;
 	int iopointer; // iopointer of the file is set to 0 by default
+	int indexInode; // global address of inode
 	Inode* info; // inode of file
 } File;
 

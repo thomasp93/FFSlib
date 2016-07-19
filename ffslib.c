@@ -4,6 +4,10 @@
 // global errno value here
 int osErrno;
 
+// global variables
+const int INODE_TABLE_BEGIN = SUPERBLOCK_INDEX+INODE_BITMAP_INDEX+DATA_BLOCK_BITMAP_INDEX; // begin index inode table
+const int DATA_BLOCK_BEGIN = sizeof(Inode)*MAX_INODE+INODE_TABLE_BEGIN; // begin index data blocks
+
 ////////////////////////////////////////////////////////////////////////
 // funzione che crea il tutto, va chiamata una volta sola all'inizio
 int FS_Init(char *path) {
@@ -353,13 +357,131 @@ int File_Create(char *file) {
 
 int File_Open(char *file) {
 	printf("File_Open\n");
-	return 0;
+	File* file = (File*) calloc(1, sizeof(File));
+	Inode* inode = (Inode*) calloc(1, sizeof(Inode));
+	Sector* sector = (Sector*) calloc(1, sizeof(Sector));
+	char* dad, son, next, dadPath, sons, block;
+	int i=0, fd, indexInodeSon, indexBlock, indexSector, indexInode, size;
+
+	// find a place into the openFileTable
+	while (openFiles->fileOpen[i] != NULL && i+1<MAX_FILE_OPEN) // while the place isn't empty
+		i++;
+
+	if (openFiles->fileOpen[i]!=NULL) // don't have empty place
+	{
+		osErrno = E_TOO_MANY_OPEN_FILES;
+		return -1;
+	}
+	else
+		fd = i; // save the fd
+
+	// dad path
+
+	// take the granfather's path
+	dad = strtok(path, "/");
+
+	if (dad != NULL) // /home dad=home
+	{
+		strcat(dadPath, "/"); // /
+
+		son = strtok(NULL, "/");
+
+		if (son != NULL) // /home/thomas dad=home son=thomas
+		{
+			strcat(dadPath, dad); // /home
+
+			next = strtok(NULL, "/"); // /home/thomas/Scrivania/pippo.txt dad=home son=thomas next=Scrivania
+
+			while (next != NULL)
+			{
+				dad = son;
+				son = next;
+				strcat(dadPath, "/");
+				strcat(dadPath, dad);
+				next = strtok(NULL, "/"); // read the next token
+			}		
+		}		
+	} // end root case
+	else
+	{
+		osErrno = E_NO_SUCH_FILE;
+		return -1; // file name not valid
+	}
+
+	size = MAX_BLOCK_FILE*(INDEX_SIZE+MAX_FILENAME_LEN);
+	sons = (void*) calloc(1, size);
+	if (Dir_Read(dadPath, sons, size) != 0) // read the dad directory
+		return -1;
+
+	indexInodeSon = atoi(strstr(sons, son)+MAX_FILENAME_LEN); // find the index of son's inode
+
+	indexBlock = (int)indexInodeSon*sizeof(Inode)/BLOCK_SIZE+3; // calculate the index of block
+	indexSector = (int)indexInodeSon*sizeof(Inode)/SECTOR_SIZE+indexBlock*BLOCK_SIZE/SECTOR_SIZE; // index of sector into the inode table
+	indexInode = (int)(indexInodeSon*sizeof(Inode))%SECTOR_SIZE; // recalculate the index of inode into the inode table
+
+	Disk_Read(indexSector, sector->data);
+	strcpy(block, sector->data);
+
+	if (indexInode+sizeof(Inode)>SECTOR_SIZE)
+	{
+		Disk_Read(indexSector+1, sector->data);
+		strcat(block, sector->data);
+	}	
+
+	// load inode
+
+	// read the file's inode
+	posCharStart=indexInode;
+	snprintf(inode->type, 1, block+posCharStart); // read the type of inode
+	posCharStart+=1; // add the char readden
+	snprintf(inode->name, MAX_FILENAME_LEN, block+posCharStart); // read the name of file
+	posCharStart+=MAX_FILENAME_LEN;
+	snprintf(inode->size, MAX_FILE_SIZE_LEN, block+posCharStart); // read the size of file
+	posCharStart+=MAX_FILE_SIZE_LEN;
+	snprintf(inode->blocks, MAX_BLOCK_FILE*INDEX_SIZE, block+posCharStart); // read all block of inode
+
+	// create file
+	file->indexInode = indexInodeSon; // write the global index of inode
+	file->iopointer = 0; // set the iopointer with zero
+	file->info = inode; // set the info of inode with the file inode
+
+	// insert the file into the openFileTable
+	openFiles->fileOpen[fd] = file;
+
+	return fd; // return the place of file
 }
 
 ////////////////////////////////////////////////////////////////////////
 
 int File_Read(int fd, void *buffer, int size) {
 	printf("File_Read\n");
+	int noCharRead = 0;
+
+	if (openFiles->fileOpen[fd] == NULL) // file not open
+	{
+		osErrno = E_BAD_FD;
+		return -1;
+	}
+
+	// file open
+	if(openFiles->fileOpen[fd]->iopointer+size<MAX_BLOCK_FILE*BLOCK_SIZE) // control the number of chars to read
+		noCharRead = size; // read all chars
+	else
+		noCharRead = MAX_BLOCK_FILE*BLOCK_SIZE-openFiles->fileOpen[fd]->iopointer; // read chars until end of file
+
+	indexBlock = openFiles->fileOpen[fd]->iopointer/BLOCK_SIZE; // calculate the index of block that the iopointer point
+
+	snprintf(addressBlock, INDEX_SIZE, openFiles->fileOpen[fd]->info->blocks+indexBlock*INDEX_SIZE); // read the address of the data block
+	
+
+	// find the block and sector index
+	indexBlock = (int)indexInodeSon*sizeof(Inode)/BLOCK_SIZE+DATA_BLOCK_BEGIN; // calculate the index of block
+	indexSector = (int)indexInodeSon*sizeof(Inode)/SECTOR_SIZE+indexBlock*BLOCK_SIZE/SECTOR_SIZE; // index of sector into the inode table
+	indexInode = (int)(indexInodeSon*sizeof(Inode))%SECTOR_SIZE; // recalculate the index of inode into the inode table
+
+	snprintf(buffer, noCharRead, openFiles->fileOpen[fd]->ioPointer)
+
+
 	return 0;
 }
 
