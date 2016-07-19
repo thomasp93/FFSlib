@@ -455,7 +455,9 @@ int File_Open(char *file) {
 
 int File_Read(int fd, void *buffer, int size) {
 	printf("File_Read\n");
-	int noCharRead = 0;
+	Sector* sector = (Sector*) calloc(1, sizeof(Sector));
+	char* block, addressBlock;
+	int noCharRead = 0, i, indexBlock, addBlock, indexSector, index;
 
 	if (openFiles->fileOpen[fd] == NULL) // file not open
 	{
@@ -472,15 +474,30 @@ int File_Read(int fd, void *buffer, int size) {
 	indexBlock = openFiles->fileOpen[fd]->iopointer/BLOCK_SIZE; // calculate the index of block that the iopointer point
 
 	snprintf(addressBlock, INDEX_SIZE, openFiles->fileOpen[fd]->info->blocks+indexBlock*INDEX_SIZE); // read the address of the data block
-	
+	addBlock=atoi(addessBlock);
 
 	// find the block and sector index
-	indexBlock = (int)indexInodeSon*sizeof(Inode)/BLOCK_SIZE+DATA_BLOCK_BEGIN; // calculate the index of block
-	indexSector = (int)indexInodeSon*sizeof(Inode)/SECTOR_SIZE+indexBlock*BLOCK_SIZE/SECTOR_SIZE; // index of sector into the inode table
-	indexInode = (int)(indexInodeSon*sizeof(Inode))%SECTOR_SIZE; // recalculate the index of inode into the inode table
+	indexBlock = (int)addBlock+DATA_BLOCK_BEGIN; // calculate the index of block
+	indexSector = (int)indexBlock*BLOCK_SIZE/SECTOR_SIZE; // index of sector into the data blocks
+	index = (int)indexBlock%BLOCK_SIZE; // recalculate the index of iopointer into the data block
 
-	snprintf(buffer, noCharRead, openFiles->fileOpen[fd]->ioPointer)
+	if (index>SECTOR_SIZE) // if the index is more than sector size
+		indexSector+=(int)index/SECTOR_SIZE; // increment the index of sector
 
+	if (Disk_Read(indexSector, sector->data)!=0) // read the sector
+		return -1;
+	strcat(block, sector->data); // concatenate the sector into the block
+
+	i=1;
+	while (index+noCharRead>i*SECTOR_SIZE) // while the number of chars read isn't contains into sectors
+	{
+		if (Disk_Read(indexSector+i, sector->data)!=0) // read the next sector
+			return -1;
+		strcat(block, sector->data); // concatenate the sector into the block
+		i++; // increment the number of sector readen
+	}
+
+	snprintf(buffer, noCharRead, block+index); // read the chars into the block
 
 	return 0;
 }
@@ -512,6 +529,74 @@ int File_Seek(int fd, int offset) {
 
 int File_Close(int fd) {
 	printf("File_Close\n");
+	Sector* sector = (Sector*) calloc(1, sizeof(Sector));
+	int indexBlock, indexSector, indexInode, noChar;
+
+	if (openFiles->fileOpen[fd] == NULL) // file not open
+	{
+		osErrno = E_BAD_FD;
+		return -1;
+	}
+
+	indexInode = openFiles->fileOpen[fd]->indexInode; // take the global index of inode of the file	
+
+	// write the inode into the inode table
+	indexBlock = (int)indexInode*sizeof(Inode)/BLOCK_SIZE+3; // calculate the index of block
+	indexSector = (int)indexInode*sizeof(Inode)/SECTOR_SIZE+indexBlock*BLOCK_SIZE/SECTOR_SIZE; // index of sector into the inode table
+	indexInode = (int)(indexInode*sizeof(Inode))%SECTOR_SIZE; // recalculate the index of inode into the inode table
+
+	noChar=0; // reset the number of char written into the inode block
+	char* inodeInfo = (char*) calloc(1, sizeof(Inode)); // create the inode
+
+	inodeInfo[indexInode+noChar] = openFiles->fileOpen[fd]->info->type; // write the file type
+	noChar++;
+
+	strcpy(inodeInfo+noChar, openFiles->fileOpen[fd]->info->name);
+	noChar+=MAX_FILENAME_LEN;
+
+	strcpy(inodeInfo+noChar, openFiles->fileOpen[fd]->info->size);
+	noChar+=5;
+
+	strcpy(inodeInfo+noChar, openFiles->fileOpen[fd]->info->blocks);
+
+	if (Disk_Read(indexSector, sector->data)!=0) // read a sector that it contains the inode of the file
+	{
+		osErrno = E_CREATE;
+		return -1;
+	}
+
+	if(indexInode+sizeof(Inode)<SECTOR_SIZE) // if the inode is less than size of the inode
+		strcpy(sector->data+indexInode, inodeInfo); // write the inode into the sector
+	else
+	{
+		for(i=0, noChar=indexInode; i<sizeof(Inode); i++, noChar++)
+		{
+			if(i+indexInode<SECTOR_SIZE) // if the sector is full
+			{
+				if (Disk_Write(indexSector, sector->data)!=0) // write the first sector
+				{
+					osErrno = E_CREATE;
+					return -1;
+				}
+				indexSector++; // increment the sector
+				if (Disk_Read(indexSector, sector->data)!=0) // read the new sector
+				{
+					osErrno = E_CREATE;
+					return -1;
+				}
+				noChar = 0; // reset the number char written
+			}
+
+			sector->data[noChar] = inodeInfo[i]; // write the char into the sector
+		}
+	}
+
+	if (Disk_Write(indexSector, sector->data)!=0) // write the sector into the disk
+	{
+		osErrno = E_CREATE;
+		return -1;
+	}
+
 	return 0;
 }
 
