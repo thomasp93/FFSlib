@@ -67,6 +67,7 @@ int Dir_Unlink(char *path);
 #define SUPERBLOCK_INDEX 0
 #define INODE_BITMAP_INDEX 1
 #define DATA_BLOCK_INDEX 2
+#define INODE_SIZE 150
 
 
 // block structure
@@ -89,8 +90,8 @@ typedef struct _group {
 	Block* superblock; // superblock
 	Block* inodeBitmap; // inode bitmap
 	Block* dataBitmap; // data bitmap
-	Block* inodeTable[DIM_INODE_TABLE]; // inode-list
-	Block* dataBlocks[DIM_GROUP-DIM_INODE_TABLE-4];// data blocks
+	Block* inodeTable[MAX_INODE*sizeof(Inode)/BLOCK_SIZE]; // inode-list
+	Block* dataBlocks[NUM_SECTORS/(BLOCK_SIZE/SECTOR_SIZE)];// data blocks
 } Group;
 
 // file structure
