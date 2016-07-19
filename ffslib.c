@@ -558,8 +558,8 @@ int File_Unlink(char *file) {
 	dir->size -=INDEX_SIZE; 
 
 	// TODO save the updated dir
-	
-	
+
+
 
 
 	free(block_bitmap_1);				//free the used structures
@@ -1067,17 +1067,19 @@ int Dir_Unlink(char *path) {				// TODO read father dir and grandfather dir
 	Sector* sector = (Sector*) calloc(1, sizeof(Sector));
 	Inode* dadInode = (Inode*) calloc(1, sizeof(Inode));
 	Inode* sonInode = (Inode*) calloc(1, sizeof(Inode));
-	char* fatherData[MAX_BLOCK_FILE*(MAX_FILENAME_LEN+INDEX_SIZE)], sonIndex[5];
-	char* token, tmp, sonPos, sonName, block;
-	int indexSonInode, indexSonSector, indexSonBlock, i;
+	char* fatherData[MAX_BLOCK_FILE*(MAX_FILENAME_LEN+INDEX_SIZE)], sonIndex[5], fatherIndex[5];
+	char* token, tmp, sonPos, sonName, block,fatherpath, grandfatherpath,fathername, posFatherInode;
+	int indexSonInode, indexSonSector, indexSonBlock, i, indexFatherInode, indexFatherBlock, indexFatherSector;
 	Sector* inodeBitmap = (Sector*) calloc(1, sizeof(Sector));
 
 	if (sizeof(path)>MAX_PATHNAME_LEN) // control the path length
 		return -1;
-
+	
 	sonName = strtok(path, "/");	
 	while(sonName!=NULL){				// search for the dir name					 
 		tmp = sonName;
+		strcat(fatherpath, "/");
+		strcat(fatherpath, tmp);
 		sonName = strtok(NULL,"/");
 	}
 
@@ -1087,6 +1089,11 @@ int Dir_Unlink(char *path) {				// TODO read father dir and grandfather dir
 		return -1;
 	}
 
+	fatherpath[strstr(fatherData, sonName)-1] = '\0';    ///find the father path
+
+
+	if(Dir_Read(fatherpath,(void *)fatherData)!=0, MAX_BLOCK_FILE*(MAX_FILENAME_LEN+INDEX_SIZE))
+		return -1;
 	sonPos =strstr(fatherData, sonName);	// calculate the son's position in fatherdata to find index
 
 	if(sonPos ==  NULL) {			// the directory not exist
@@ -1129,15 +1136,63 @@ int Dir_Unlink(char *path) {				// TODO read father dir and grandfather dir
 		return -1;
 	}
 
-	// TODO read Grandfather to find father inode and read father inode info, free inode bitmap cell
+	fathername = strtok(fatherpath, "/");
+	while (fathername!=NULL){
+		tmp = fathername;
+		strcat(grandfatherpath, "/");
+		strcat(grandfatherpath, fathername);
+		fathername = strtok(NULL, "/");
+	}
+	fathername = tmp;
 
+	if(Dir_Read(grandfatherpath, (void*) fatherData, MAX_BLOCK_FILE*(MAX_FILENAME_LEN+INDEX_SIZE))!=0)
+		return -1;
+	posFatherInode =strstr(fatherData, fathername);	// calculate the son's position in fatherdata to find index
+
+	if(posFatherInode ==  NULL) {			// the directory not exist
+		return -1;				
+	}
+	else {							// copy the son's inode index
+		i=0;
+		while(i<INDEX_SIZE){
+			fatherIndex[i] = fatherData[posFatherInode+strlen(fathername)+i]
+		}
+	}
+	// find father position
+	indexFatherInode = atoi(fatherIndex);
+	indexFatherBlock = (int)indexFatherInode*sizeof(Inode)/BLOCK_SIZE+3; // calculate the index of block
+	indexFatherSector = (int)indexFatherInode*sizeof(Inode)/SECTOR_SIZE+indexFatherBlock*BLOCK_SIZE/SECTOR_SIZE; // index of sector into the inode table
+	indexFatherInode = (int)(indexFatherInode*sizeof(Inode))%SECTOR_SIZE; // recalculate the index of inode into the inode table
+
+	block = (char*) calloc( 1, sizeof(char)*BLOCK_SIZE)
+	if(Disk_Read(indexFatherSector, sector->data))
+			return -1;		//read son's inode info
+		strcpy(block, sector->data);
+
+		if (indexFatherInode+sizeof(Inode)>SECTOR_SIZE)   // if inode is splitted between two sectors
+			{
+				if(Disk_Read(indexFatherSector+1, sector->data))
+					return -1;
+				strcat(block, sector->data);
+			}
+
+	posCharStart=(int)(indexFatherInode*sizeof(Inode))%SECTOR_SIZE; // recalculate the index of inode into the inode table
+	snprintf(dadInode->type, 1, block+posCharStart); // read the type of inode
+	posCharStart+=1; // add the char readden
+	snprintf(dadInode->name, MAX_FILENAME_LEN, block+posCharStart); // read the name of file (directory)
+	posCharStart+=MAX_FILENAME_LEN;
+	snprintf(dadInode->size, MAX_FILE_SIZE_LEN, block+posCharStart);
+	posCharStart+=MAX_FILE_SIZE_LEN;
+	snprintf(sonInode->blocks, MAX_BLOCK_FILE*INDEX_SIZE, block+posCharStart);
+
+	// delete inode of the son
 	posIndextodelete = strstr(dadInode->blocks, sonIndex);
 	for(i=0; i<INDEX_SIZE; i++)											// delete father "link" to the son
-		dadInode->blocks[i+sonIndex] = dadInode->blocks[dadInode->size + 1 - INDEX_SIZE + i];
+		dadInode->blocks[i+posIndextodelete] = dadInode->blocks[dadInode->size + 1 - INDEX_SIZE + i];
 
 	dadInode->size -=INDEX_SIZE; 
 
-	// delete inode of the son
+	//TODO save updated father's inode
 
 	char* inodeInfo = (char*) calloc(1, sizeof(Inode));
 	if(indexSonInode+sizeof(Inode)<SECTOR_SIZE) // if the inode is less than size free into the inode
@@ -1176,6 +1231,13 @@ int Dir_Unlink(char *path) {				// TODO read father dir and grandfather dir
 		if(Disk_Write(1*BLOCK_SIZE/SECTOR_SIZE+1, inodeBitmap->data))
 			return -1;
 	}
+
+
+
+
+
+
+
 	printf("Dir_Unlink\n");
 	return 0;
 	
