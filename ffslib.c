@@ -6,7 +6,7 @@ int osErrno;
 
 // global variables
 const int INODE_TABLE_BEGIN = SUPERBLOCK_INDEX+INODE_BITMAP_INDEX+DATA_BLOCK_INDEX; // begin index inode table
-const int DATA_BLOCK_BEGIN = INODE_SIZE*MAX_INODE+INODE_TABLE_BEGIN; // begin index data blocks
+const int DATA_BLOCK_BEGIN = 150*MAX_INODE+INODE_TABLE_BEGIN; // begin index data blocks
 
 ////////////////////////////////////////////////////////////////////////
 // funzione che crea il tutto, va chiamata una volta sola all'inizio
@@ -525,45 +525,45 @@ int File_Read(int fd, void *buffer, int size) {
 ////////////////////////////////////////////////////////////////////////
 
 int File_Write(int fd, void *buffer, int size) {
-	int noBlock, blockPos, i, datablock, sectorPos, newSize, j, stop;
+	int noBlock, blockPos, i, datablock, sectorPos, newSize, j, stop, noSector;
 	char datablockIndex[INDEX_SIZE], datablockBitmap[BLOCK_SIZE];
 
 	Sector* sector = (Sector *) calloc(1, sizeof(Sector));
 	Sector* datablockBitmap_1 = (Sector *) calloc(1, sizeof(Sector));
 	Sector* datablockBitmap_2 = (Sector *) calloc(1, sizeof(Sector));
-	if(OpenFiles->fileOpen[fd] == NULL){
+	if(openFiles->fileOpen[fd] == NULL){
 		osErrno = E_BAD_FD;
 		return -1;
 	}
-	noBlock = (OpenFiles->fileOpen[fd]->iopointer)/BLOCK_SIZE;										// find the datablock index and position
-	blockPos = (OpenFiles->fileOpen[fd]->iopointer)%BLOCK_SIZE;
+	noBlock = (openFiles->fileOpen[fd]->iopointer)/BLOCK_SIZE;										// find the datablock index and position
+	blockPos = (openFiles->fileOpen[fd]->iopointer)%BLOCK_SIZE;
 	sectorPos = blockPos%SECTOR_SIZE;
 	noSector = blockPos/SECTOR_SIZE;																//no of sector of the block
 	if(blockPos+size < BLOCK_SIZE){
 
-		snprintf(datablockIndex, 5, (OpenFiles->fileOpen[fd]->info->blocks)+noBlock*INDEX_SIZE);	//read the data block index
+		snprintf(datablockIndex, 5, (openFiles->fileOpen[fd]->info->blocks)+noBlock*INDEX_SIZE);	//read the data block index
 		datablock = atoi(datablockIndex) + DATA_BLOCK_BEGIN;									 	//find the real data block index
 																
 		if(Disk_Read(datablock*BLOCK_SIZE/SECTOR_SIZE+noSector, sector->data)!=0)					//read the right sector
 			return -1;					
 																 
 		for(i=0; i<size;i++){																		//write the buffer
-			if(sectorPos+i=>SECTOR_SIZE){															//if i reach the sector limit pass to next sector
+			if(sectorPos+i>=SECTOR_SIZE){															//if i reach the sector limit pass to next sector
 				if(Disk_Write(datablock*BLOCK_SIZE/SECTOR_SIZE+noSector, sector->data)!=0)					
 					return -1;
 				noSector++;
 				if(Disk_Read(datablock*BLOCK_SIZE/SECTOR_SIZE+noSector, sector->data)!=0)			
 					return -1;
-				sectorPos = 0:
+				sectorPos = 0;
 			}
-			sector->data[sectorPos+i] = (char*) buffer[i];
+			sector->data[sectorPos+i] = (char) buffer[i];
 		}
 
-`		if(Disk_Write(datablock*BLOCK_SIZE/SECTOR_SIZE+noSector, sector->data)!=0)					//save the sector update
+		if(Disk_Write(datablock*BLOCK_SIZE/SECTOR_SIZE+noSector, sector->data)!=0)					//save the sector update
 			return -1;	
 
-		newSize = atoi(OpenFiles->fileOpen[fd]->info->size) + size;									//update the inode size
-		snprintf(OpenFiles->fileOpen[fd]->info->size, INDEX_SIZE, newSize);
+		newSize = atoi(openFiles->fileOpen[fd]->info->size) + size;									//update the inode size
+		snprintf(openFiles->fileOpen[fd]->info->size, INDEX_SIZE, "%05d", newSize);
 	}
 	else{																							//if the buffer needs more than a block
 		i=0;
@@ -574,7 +574,7 @@ int File_Write(int fd, void *buffer, int size) {
 		strcpy(datablockBitmap, datablockBitmap_1->data);
 		strcat(datablockBitmap, datablockBitmap_2->data);
 
-		snprintf(datablockIndex, 5, (OpenFiles->fileOpen[fd]->info->blocks)+noBlock*INDEX_SIZE);	//read the data block index
+		snprintf(datablockIndex, 5, (openFiles->fileOpen[fd]->info->blocks)+noBlock*INDEX_SIZE);	//read the data block index
 		datablock = atoi(datablockIndex) + DATA_BLOCK_BEGIN;
 
 		while(i<size){
@@ -586,7 +586,7 @@ int File_Write(int fd, void *buffer, int size) {
 				blockPos=0;																		//reset some counters
 				noSector=0;
 				sectorPos=0;
-				snprintf(datablockIndex, 5, (OpenFiles->fileOpen[fd]->info->blocks)+noBlock*INDEX_SIZE);	//read the data block index
+				snprintf(datablockIndex, 5, (openFiles->fileOpen[fd]->info->blocks)+noBlock*INDEX_SIZE);	//read the data block index
 				if(strcmp(datablockIndex, "00000")!=0){														//if the file has already one block allocated
 					datablock = atoi(datablockIndex) + DATA_BLOCK_BEGIN;	
 				}
@@ -596,32 +596,32 @@ int File_Write(int fd, void *buffer, int size) {
 							datablockBitmap[j] = 1;
 							if(j/SECTOR_SIZE == 0){
 								datablockBitmap_1->data[j]= '\0';
-								Disk_Write(2*BLOCK_SIZE/SECTOR_SIZE, datablockBitmap_1->data)
+								Disk_Write(2*BLOCK_SIZE/SECTOR_SIZE, datablockBitmap_1->data);
 								break;
 							}
 							else if(j/SECTOR_SIZE == 1)
 								datablockBitmap_2->data[j]= '\0';
-								Disk_Write(2*BLOCK_SIZE/SECTOR_SIZE+1, datablockBitmap_2->data)
+								Disk_Write(2*BLOCK_SIZE/SECTOR_SIZE+1, datablockBitmap_2->data);
 								break;
 						}
 					}
 					datablock = j + DATA_BLOCK_BEGIN;									// copy the new block index into the inode
-					snprintf(datablockIndex, %04d, datablock);
-					strcat(OpenFiles->fileOpen[fd]->info->blocks, datablockIndex);
+					snprintf(datablockIndex, INDEX_SIZE, "%04d", datablock);
+					strcat(openFiles->fileOpen[fd]->info->blocks, datablockIndex);
 					
 				}
 			}
 			if(Disk_Read(datablock*BLOCK_SIZE/SECTOR_SIZE+noSector, sector->data)!=0)					//read the right sector
 						return -1;	
 			for(j=sectorPos;j<SECTOR_SIZE;j++){
-				sector->data[j]= buffer[i];
+				sector->data[j]= (char) buffer[i];
 				i++;
 				blockPos++;
 			}
 			noSector++;
 		}
 	}
-	snprintf(OpenFiles->fileOpen[fd]->info->size, %04d, atoi(OpenFiles->fileOpen[fd]->info->size)+size);
+	snprintf(openFiles->fileOpen[fd]->info->size, MAX_FILE_SIZE_LEN, "%05d", atoi(openFiles->fileOpen[fd]->info->size)+size);
 	printf("File_Write\n");
 	return 0;
 }
@@ -730,17 +730,55 @@ int File_Unlink(char *file) {
 	char* tmp;
 	char* dirpath;
 	char* fatherpath;
-	char* dircontent[MAX_BLOCK_FILE*(MAX_FILENAME_LEN+INDEX_SIZE)];
+	char dircontent[MAX_BLOCK_FILE*(MAX_FILENAME_LEN+INDEX_SIZE)];
 	char* filePos;
 	char* dirname;
 	char* dirPos;
 
-	int i, fileIndex, fileRelInode, fileSector, fileBlock, fileInode, charPos, noFileBlocks, dirRelInode, dirSector, dirBlock, posCharStart, posChar;
-	char block[BLOCK_SIZE], dirIndex[INDEX_SIZE];
+	int i, fileRelInode, fileSector, fileBlock, fileInode, charPos, noFileBlocks, dirRelInode, dirSector, dirBlock, posCharStart, posChar, dirInode;
+	char fileIndex[INDEX_SIZE];
+	char block[BLOCK_SIZE];
+	char dirIndex[INDEX_SIZE];
 	Sector* sector= (Sector*) calloc(1, sizeof(Sector));
+	Sector* inodeBitmap = (Sector*) calloc(1, sizeof(Sector));
 	Sector* block_bitmap_1= (Sector*) calloc(1, sizeof(Sector));
 	Sector* block_bitmap_2= (Sector*) calloc(1, sizeof(Sector));
 	Sector* inode_bitmap= (Sector*) calloc(1, sizeof(Sector));
+	
+	// dad path
+
+	// take the granfather's path
+	dad = strtok(file, "/");
+
+	if (dad != NULL) // /home dad=home
+	{
+		strcat(dadPath, "/"); // /
+
+		son = strtok(NULL, "/");
+
+		if (son != NULL) // /home/thomas dad=home son=thomas
+		{
+			strcat(dadPath, dad); // /home
+
+			next = strtok(NULL, "/"); // /home/thomas/Scrivania/pippo.txt dad=home son=thomas next=Scrivania
+
+			while (next != NULL)
+			{
+				dad = son;
+				son = next;
+				strcat(dadPath, "/");
+				strcat(dadPath, dad);
+				next = strtok(NULL, "/"); // read the next token
+			}		
+		}		
+	} // end root case
+	else
+	{
+		osErrno = E_NO_SUCH_FILE;
+		return -1; // file name not valid
+	}
+	
+	
 
 	tmp = strtok(file, "/");
 	while(tmp!=NULL){					//save the dirpath and the file name
@@ -757,12 +795,9 @@ int File_Unlink(char *file) {
 	if(filePos==NULL){
 		return -1;
 	}
-	else{
-		i=0;
-		while(i<INDEX_SIZE){									//copy the file inode index
-			fileIndex[i] = dircontent[filePos+strlen(filename)+i];
-		}
-	}
+	else
+		snprintf(fileIndex, INDEX_SIZE, dircontent+strlen(filePos)+MAX_FILENAME_LEN); //copy the file inode index
+	
 	fileRelInode = atoi(fileIndex);
 	fileBlock = (int)fileRelInode*sizeof(Inode)/BLOCK_SIZE+3; // calculate the index of block
 	fileSector = (int)fileRelInode*sizeof(Inode)/SECTOR_SIZE+fileBlock*BLOCK_SIZE/SECTOR_SIZE; // index of sector into the inode table
@@ -777,32 +812,32 @@ int File_Unlink(char *file) {
 	}
 
 	// read the block bitmap
-	if(Disk_Read(2*BLOCK_SIZE/SECTOR_SIZE,block_bitmap_1)!=0)
+	if(Disk_Read(2*BLOCK_SIZE/SECTOR_SIZE,block_bitmap_1->data)!=0)
 		return -1;
-	if(Disk_Read(2*BLOCK_SIZE/SECTOR_SIZE+1,block_bitmap_2)!=0)
+	if(Disk_Read(2*BLOCK_SIZE/SECTOR_SIZE+1,block_bitmap_2->data)!=0)
 		return -1;
 
 
 	posChar=fileInode; // recalculate the index of inode into the inode table
-	snprintf(fileType->type, 1, block+posCharStart); // read the type of inode
+	fileType->type = block[posCharStart]; // read the type of inode
 	posCharStart+=1; // add the char readden
 	snprintf(fileType->name, MAX_FILENAME_LEN, block+posCharStart); // read the name of file (directory)
 	posCharStart+=MAX_FILENAME_LEN;
 	snprintf(fileType->size, MAX_FILE_SIZE_LEN, block+posCharStart); // read the size of file (directory)
 	posCharStart+=MAX_FILE_SIZE_LEN;
-	noFileBlocks = (fileType->size)/BLOCK_SIZE;			// calculate how much blocks use the file
-	for(i=0, i<noFileBlocks; i++)					// for every block of the file delete the content
+	noFileBlocks = atoi(fileType->size)/BLOCK_SIZE;			// calculate how much blocks use the file
+	for(i=0; i<noFileBlocks; i++)					// for every block of the file delete the content
+	{
 		snprintf(tmp, INDEX_SIZE, block+posCharStart);
 		posCharStart+=INDEX_SIZE;
-		sector->data = (char*) calloc(SECTOR_SIZE, sizeof(char));
-		if(Disk_Write(atoi(tmp)*BLOCK_SIZE/SECTOR_SIZE, sector->data)!=0
+		if(Disk_Write(atoi(tmp)*BLOCK_SIZE/SECTOR_SIZE, sector->data)!=0)
 			return -1;
 		if(Disk_Write(atoi(tmp)*BLOCK_SIZE/SECTOR_SIZE+1, sector->data)!=0)
 			return -1;
 		if(atoi(tmp)<512)											//free the block bitmap
-			block_bitmap_1[atoi(tmp)] = '0';
+			block_bitmap_1->data[atoi(tmp)] = '0';
 		else if(atoi(tmp)>=512 && atoi(tmp)<1024)
-			block_bitmap_2[atoi(tmp)%SECTOR_SIZE] = '0';
+			block_bitmap_2->data[atoi(tmp)%SECTOR_SIZE] = '0';
 		else
 			return -1;
 	}
@@ -831,9 +866,9 @@ int File_Unlink(char *file) {
 
 
 
-	if(Disk_Write(2*BLOCK_SIZE/SECTOR_SIZE,block_bitmap_1)!=0)
+	if(Disk_Write(2*BLOCK_SIZE/SECTOR_SIZE,block_bitmap_1->data)!=0)
 		return -1;
-	if(Disk_Write(2*BLOCK_SIZE/SECTOR_SIZE+1,block_bitmap_2)!=0)
+	if(Disk_Write(2*BLOCK_SIZE/SECTOR_SIZE+1,block_bitmap_2->data)!=0)
 		return -1;
 
 	tmp = strtok(dirpath, "/");			//search for the father of the dir
@@ -853,7 +888,7 @@ int File_Unlink(char *file) {
 	else{
 		i=0;
 		while(i<INDEX_SIZE)									//copy the dir inode index
-			dirIndex[i] = dircontent[dirPos+strlen(dirname)+i];
+			dirIndex[i] = dircontent[dirPos+MAX_FILENAME_LEN+i];
 		
 	}
 	dirRelInode = atoi(dirIndex);
@@ -872,7 +907,7 @@ int File_Unlink(char *file) {
 		strcat(block, sector->data);
 	}	
 	posCharStart=dirInode;
-	snprintf(dir->type, 1, block+posCharStart); // read the type of inode
+	dir->type = block[posCharStart]; // read the type of inode
 	posCharStart+=1; // add the char readden
 	snprintf(dir->name, MAX_FILENAME_LEN, block+posCharStart); // read the name of file (directory)
 	posCharStart+=MAX_FILENAME_LEN;
@@ -908,9 +943,17 @@ int File_Unlink(char *file) {
 
 int Dir_Create(char *path) {
 	Sector* sector = (Sector*) calloc(1, sizeof(Sector));
-	char* buff, subString, block;
-	char* granfather, dad, son, next, granPath, sons;
-	int i, c, position, indexBlock, indexSector, indexInode, noChar;
+	char* buff;
+	char* subString;
+	char* block;
+	char* granfather;
+	char* dad;
+	char* son;
+	char* next;
+	char* granPath;
+	char* gran;
+	char* sons;
+	int i, c, position, indexBlock, indexSector, indexInode, noChar, size;
 	int indexInodeSon, indexInodeDad, posCharStart;
 
 	if (strlen(path)>MAX_PATHNAME_LEN)
@@ -925,23 +968,23 @@ int Dir_Create(char *path) {
 	for(i=0; i<BLOCK_SIZE/SECTOR_SIZE; i++) // visit the inode bitmap
 	{
 		indexInode=0;
-		if (Disk_Read(DIM_BLOCK/SECTOR_SIZE+i, sector->data) != 0) // read bitmap inode
+		if (Disk_Read(BLOCK_SIZE/SECTOR_SIZE+i, sector->data) != 0) // read bitmap inode
 		{
 			osErrno = E_CREATE;
 			return -1;
 		}
 
-		while(c!="0" && indexInode<SECTOR_SIZE) // while c is not equals to 0 and index inode is less than number inode into the sector
+		while(c!='0' && indexInode<SECTOR_SIZE) // while c is not equals to 0 and index inode is less than number inode into the sector
 		{
 			c = sector->data[indexInodeSon]; // read index inode char
 			indexInodeSon++; // increment index
 		}
 
-		if(c=="0") // find the free inode
+		if(c=='0') // find the free inode
 			break; // exit from for
 	}
 
-	if(c!="0") // if not exist inode free
+	if(c!='0') // if not exist inode free
 	{
 		osErrno = E_CREATE;
 		return -1;
@@ -951,7 +994,7 @@ int Dir_Create(char *path) {
 
 	// else I found the index of free inode
 	indexInodeSon += i*SECTOR_SIZE; // calculate the true value of free index inode
-	sector->data[indexInodeSon] = "1"; // set the inode as busy
+	sector->data[indexInodeSon] = '1'; // set the inode as busy
 	if (Disk_Write(BLOCK_SIZE/SECTOR_SIZE+i, sector->data) != 0) // write the edit sector into the disk
 	{
 		osErrno = E_CREATE;
@@ -993,8 +1036,9 @@ int Dir_Create(char *path) {
 				}
 			}
 
+			size = MAX_BLOCK_FILE*(INDEX_SIZE+MAX_FILENAME_LEN);
 			sons = (void*) calloc(1, size);
-			if (Dir_Read(granPath, sons, MAX_BLOCK_FILE*(INDEX_SIZE+MAX_FILENAME_LEN)) != 0)
+			if (Dir_Read(granPath, sons, size) != 0)
 			{
 				osErrno = E_CREATE;
 				return -1;
