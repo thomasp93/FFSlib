@@ -744,7 +744,7 @@ int File_Unlink(char *file) {
 	Sector* block_bitmap_1= (Sector*) calloc(1, sizeof(Sector));
 	Sector* block_bitmap_2= (Sector*) calloc(1, sizeof(Sector));
 	Sector* inode_bitmap= (Sector*) calloc(1, sizeof(Sector));
-	
+	tmp = strtok(path, "/");
 if (tmp != NULL) // root case /
 	{
 		dirpath = strtok(NULL, "/");
