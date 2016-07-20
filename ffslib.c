@@ -488,6 +488,21 @@ int File_Read(int fd, void *buffer, int size) {
 ////////////////////////////////////////////////////////////////////////
 
 int File_Write(int fd, void *buffer, int size) {
+	int noBlock, blockPos, i;
+	if(OpenFiles->fileOpen[fd] == NULL){
+		osErrno = E _BAD _FD;
+		return -1;
+	}
+	noBlock = (OpenFiles->fileOpen[fd]->iopointer)/BLOCK_SIZE;
+	blockPos = (OpenFiles->fileOpen[fd]->iopointer)%BLOCK_SIZE;
+	if(blockPos+size < BLOCK_SIZE){
+		for(i=0; i<size;i++){
+			OpenFiles
+		}
+	}
+
+
+
 	printf("File_Write\n");
 	return 0;
 }
