@@ -745,50 +745,34 @@ int File_Unlink(char *file) {
 	Sector* block_bitmap_2= (Sector*) calloc(1, sizeof(Sector));
 	Sector* inode_bitmap= (Sector*) calloc(1, sizeof(Sector));
 	
-	// dad path
-
-	// take the granfather's path
-	dad = strtok(file, "/");
-
-	if (dad != NULL) // /home dad=home
+if (tmp != NULL) // root case /
 	{
-		strcat(dadPath, "/"); // /
+		dirpath = strtok(NULL, "/");
 
-		son = strtok(NULL, "/");
-
-		if (son != NULL) // /home/thomas dad=home son=thomas
+		if (dirpath != NULL) // /home/thomas gran=home dad=thomas
 		{
-			strcat(dadPath, dad); // /home
+			strcat(fatherpath, "/"); // /
 
-			next = strtok(NULL, "/"); // /home/thomas/Scrivania/pippo.txt dad=home son=thomas next=Scrivania
+			filename = strtok(NULL, "/");
 
-			while (next != NULL)
+			if (son != NULL) // /home/thomas/Scrivania gran=home dad=thomas son=Scrivania
 			{
-				dad = son;
-				son = next;
-				strcat(dadPath, "/");
-				strcat(dadPath, dad);
-				next = strtok(NULL, "/"); // read the next token
-			}		
-		}		
-	} // end root case
-	else
-	{
-		osErrno = E_NO_SUCH_FILE;
-		return -1; // file name not valid
-	}
-	
-	
+				strcat(fatherPath, tmp); // /home
 
-	tmp = strtok(file, "/");
-	while(tmp!=NULL){					//save the dirpath and the file name
-		filename = tmp;
-		strcat(dirpath, "/");
-		strcat(dirpath, tmp);
-		tmp = strtok(NULL, "/");
-	}
+				next = strtok(NULL, "/"); // /home/thomas/Scrivania/pippo gran=home dad=thomas son=Scrivania next=pippo
 
-	dirpath[strstr(dirpath, filename)-dirpath-1]= '\0'; // delete from dirpath the name of the file to find the correct dir
+				while (next != NULL)
+				{
+					tmp = dirpath;
+					dirpath = filename;
+					filename = next;
+					strcat(fatherpath, "/");
+					strcat(fatherpath, tmp);
+					next = strtok(NULL, "/"); // read the next token
+				}
+			}
+		}
+	}
 
 	Dir_Read(dirpath,(void *)dircontent, MAX_BLOCK_FILE*(MAX_FILENAME_LEN+INDEX_SIZE));	//read the dir content to find the file inode
 	filePos = strstr(dircontent, filename);
