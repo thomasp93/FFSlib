@@ -734,6 +734,7 @@ int File_Unlink(char *file) {
 	char* filePos;
 	char* dirname;
 	char* dirPos;
+	char* next;
 
 	int i, fileRelInode, fileSector, fileBlock, fileInode, charPos, noFileBlocks, dirRelInode, dirSector, dirBlock, posCharStart, posChar, dirInode;
 	char fileIndex[INDEX_SIZE];
@@ -744,8 +745,9 @@ int File_Unlink(char *file) {
 	Sector* block_bitmap_1= (Sector*) calloc(1, sizeof(Sector));
 	Sector* block_bitmap_2= (Sector*) calloc(1, sizeof(Sector));
 	Sector* inode_bitmap= (Sector*) calloc(1, sizeof(Sector));
-	tmp = strtok(path, "/");
-if (tmp != NULL) // root case /
+	
+	tmp = strtok(file, "/");
+	if (tmp != NULL) // root case /
 	{
 		dirpath = strtok(NULL, "/");
 
@@ -757,7 +759,7 @@ if (tmp != NULL) // root case /
 
 			if (son != NULL) // /home/thomas/Scrivania gran=home dad=thomas son=Scrivania
 			{
-				strcat(fatherPath, tmp); // /home
+				strcat(fatherpath, tmp); // /home
 
 				next = strtok(NULL, "/"); // /home/thomas/Scrivania/pippo gran=home dad=thomas son=Scrivania next=pippo
 
@@ -775,10 +777,10 @@ if (tmp != NULL) // root case /
 			if(Dir_Read(fatherpath,(void *) dircontent, MAX_BLOCK_FILE*(MAX_FILENAME_LEN+INDEX_SIZE))!=0)
 				return -1; // read to find dir inode
 			dirPos = strstr(dircontent, dirname);														//save the position of the dirname to find inode 
-			snprintf(dirIndex, "%04d", dircontent+dirPos) // ??????????????????????????????????????????
+			snprintf(dirIndex, INDEX_SIZE, "%04d", dirPos+MAX_FILENAME_LEN); // ??????????????????????????????????????????
 		}
 		else
-			dirIndex="0000";
+			dirIndex=['0','0','0', '0'];
 
 	}
 
@@ -887,11 +889,14 @@ if (tmp != NULL) // root case /
 	posCharStart+=MAX_FILE_SIZE_LEN;
 	snprintf(dir->blocks, MAX_BLOCK_FILE*INDEX_SIZE, block+posCharStart); // read all block of inode
 
-	filePos= strstr(dir->blocks, filename);
+	filePos = strstr(dir->blocks, fileRelInode);
 	for(i=0; i<INDEX_SIZE; i++)											// delete father "link" to the son
-		dir->blocks[i+filePos] = dir->blocks[dir->size + 1 - INDEX_SIZE + i];
+	{
+		filePos+i = dir->blocks[atoi(dir->size) - INDEX_SIZE + i];
+		dir->blocks[atoi(dir->size)- INDEX_SIZE + i] = '0'; // reset the memory deleted
+	}
 
-	dir->size -=INDEX_SIZE; 
+	snprintf(dir->size, MAX_FILE_SIZE_LEN, "%05d", atoi(dir->size)-INDEX_SIZE); // deincrement the size of directory
 
 	// TODO save the updated dir
 	
