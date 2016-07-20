@@ -525,21 +525,101 @@ int File_Read(int fd, void *buffer, int size) {
 ////////////////////////////////////////////////////////////////////////
 
 int File_Write(int fd, void *buffer, int size) {
-	/*int noBlock, blockPos, i;
+	int noBlock, blockPos, i, datablock, sectorPos, newSize, j, stop;
+	char datablockIndex[INDEX_SIZE], datablockBitmap[BLOCK_SIZE];
+
+	Sector* sector = (Sector *) calloc(1, sizeof(Sector));
+	Sector* datablockBitmap_1 = (Sector *) calloc(1, sizeof(Sector));
+	Sector* datablockBitmap_2 = (Sector *) calloc(1, sizeof(Sector));
 	if(OpenFiles->fileOpen[fd] == NULL){
 		osErrno = E_BAD_FD;
 		return -1;
 	}
-	noBlock = (OpenFiles->fileOpen[fd]->iopointer)/BLOCK_SIZE;
+	noBlock = (OpenFiles->fileOpen[fd]->iopointer)/BLOCK_SIZE;										// find the datablock index and position
 	blockPos = (OpenFiles->fileOpen[fd]->iopointer)%BLOCK_SIZE;
+	sectorPos = blockPos%SECTOR_SIZE;
+	noSector = blockPos/SECTOR_SIZE;																//no of sector of the block
 	if(blockPos+size < BLOCK_SIZE){
-		for(i=0; i<size;i++){
-			OpenFiles
+
+		snprintf(datablockIndex, 5, (OpenFiles->fileOpen[fd]->info->blocks)+noBlock*INDEX_SIZE);	//read the data block index
+		datablock = atoi(datablockIndex) + DATA_BLOCK_BEGIN;									 	//find the real data block index
+																
+		if(Disk_Read(datablock*BLOCK_SIZE/SECTOR_SIZE+noSector, sector->data)!=0)					//read the right sector
+			return -1;					
+																 
+		for(i=0; i<size;i++){																		//write the buffer
+			if(sectorPos+i=>SECTOR_SIZE){															//if i reach the sector limit pass to next sector
+				if(Disk_Write(datablock*BLOCK_SIZE/SECTOR_SIZE+noSector, sector->data)!=0)					
+					return -1;
+				noSector++;
+				if(Disk_Read(datablock*BLOCK_SIZE/SECTOR_SIZE+noSector, sector->data)!=0)			
+					return -1;
+				sectorPos = 0:
+			}
+			sector->data[sectorPos+i] = (char*) buffer[i];
+		}
+
+`		if(Disk_Write(datablock*BLOCK_SIZE/SECTOR_SIZE+noSector, sector->data)!=0)					//save the sector update
+			return -1;	
+
+		newSize = atoi(OpenFiles->fileOpen[fd]->info->size) + size;									//update the inode size
+		snprintf(OpenFiles->fileOpen[fd]->info->size, INDEX_SIZE, newSize);
+	}
+	else{																							//if the buffer needs more than a block
+		i=0;
+		if(Disk_Read(2*BLOCK_SIZE/SECTOR_SIZE, datablockBitmap_1->data)!=0)							//load data block bitmap to find free block if needed
+			return -1;
+		if(Disk_Read(2*BLOCK_SIZE/SECTOR_SIZE, datablockBitmap_2->data)!=0)
+			return -1;
+
+		snprintf(datablockIndex, 5, (OpenFiles->fileOpen[fd]->info->blocks)+noBlock*INDEX_SIZE);	//read the data block index
+		datablock = atoi(datablockIndex) + DATA_BLOCK_BEGIN;
+
+		while(i<size){
+
+			if(blockPos+i>=BLOCK_SIZE){															//if i reach the block dimension i search for the next block or a new one
+				noBlock++;
+				if(noBlock>MAX_BLOCK_FILE)														//if i reach max file limit 
+					return -1;
+				blockPos=0;																		//reset some counters
+				noSector=0;
+				sectorPos=0;
+				snprintf(datablockIndex, 5, (OpenFiles->fileOpen[fd]->info->blocks)+noBlock*INDEX_SIZE);	//read the data block index
+				if(strcmp(datablockIndex, "00000")!=0){														//if the file has already one block allocated
+					datablock = atoi(datablockIndex) + DATA_BLOCK_BEGIN;	
+				}
+				else{																						//search for a new one
+					for(j=0; j<BLOCK_SIZE;j++){
+						if(datablockBitmap[j]==0){
+							datablockBitmap[j] = 1;
+							if(j/SECTOR_SIZE == 0){
+								datablockBitmap_1->data[j]= '\0';
+								Disk_Write(2*BLOCK_SIZE/SECTOR_SIZE, datablockBitmap_1->data)
+								break;
+							}
+							else if(j/SECTOR_SIZE == 1)
+								datablockBitmap_2->data[j]= '\0';
+								Disk_Write(2*BLOCK_SIZE/SECTOR_SIZE+1, datablockBitmap_2->data)
+								break;
+						}
+					}
+					datablock = j + DATA_BLOCK_BEGIN;									// copy the new block index into the inode
+					snprintf(datablockIndex, %04d, datablock);
+					strcat(OpenFiles->fileOpen[fd]->info->blocks, datablockIndex);
+					
+				}
+			}
+			if(Disk_Read(datablock*BLOCK_SIZE/SECTOR_SIZE+noSector, sector->data)!=0)					//read the right sector
+						return -1;	
+			for(j=sectorPos;j<SECTOR_SIZE;j++){
+				sector->data[j]= buffer[i];
+				i++;
+				blockPos++;
+			}
+			noSector++;
 		}
 	}
-
-	*/
-
+	snprintf(OpenFiles->fileOpen[fd]->info->size, %04d, atoi(OpenFiles->fileOpen[fd]->info->size)+size);
 	printf("File_Write\n");
 	return 0;
 }
