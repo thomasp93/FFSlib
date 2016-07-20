@@ -911,7 +911,7 @@ int File_Unlink(char *file) {
 		snprintf(sector->data, SECTOR_SIZE, block);
 		if(Disk_Write(dirSector, sector->data)!=0)
 			return -1;
-		snprinf(sector->data, SECTOR_SIZE, block+SECTOR_SIZE);
+		snprintf(sector->data, SECTOR_SIZE, block+SECTOR_SIZE);
 		if(Disk_Write(dirSector+1, sector->data)!=0)
 			return -1;
 	}
