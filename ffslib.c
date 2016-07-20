@@ -736,7 +736,7 @@ int File_Unlink(char *file) {
 	char* dirPos;
 	char* next;
 
-	int i, fileRelInode, fileSector, fileBlock, fileInode, charPos, noFileBlocks, dirRelInode, dirSector, dirBlock, posCharStart, posChar, dirInode;
+	int i, fileRelInode, fileSector, fileBlock, fileInode, charPos, noFileBlocks, dirRelInode, dirSector, dirBlock, posCharStart, posChar, dirInode, blockread;
 	char fileIndex[INDEX_SIZE];
 	char block[BLOCK_SIZE];
 	char dirIndex[INDEX_SIZE];
@@ -872,6 +872,7 @@ int File_Unlink(char *file) {
 	
 	if (Disk_Read(dirSector, sector->data)!=0)
 		return -1;
+	blockread=0;
 	strcpy(block, (sector->data));
 	
 	if (dirInode+sizeof(Inode)>SECTOR_SIZE)
@@ -879,6 +880,7 @@ int File_Unlink(char *file) {
 		if(Disk_Read(dirSector+1, sector->data)!=0)
 			return -1;
 		strcat(block, sector->data);
+		blockread=1;
 	}	
 	posCharStart=dirInode;
 	dir->type = block[posCharStart]; // read the type of inode
@@ -898,9 +900,20 @@ int File_Unlink(char *file) {
 
 	snprintf(dir->size, MAX_FILE_SIZE_LEN, "%05d", atoi(dir->size)-INDEX_SIZE); // deincrement the size of directory
 
-	// TODO save the updated dir
-	
 
+	if(blockread=0){								//if i read only a sector
+		snprintf(sector->data, SECTOR_SIZE, block);
+		if((Disk_Write(dirSector), sector->data)!=0)
+			return -1;
+	}
+	else{
+		snprinf(sector->data, SECTOR_SIZE, block);
+		if((Disk_Write(dirSector, sector->data)!=0)
+			return -1;
+		snprinf(sector->data, SECTOR_SIZE, block+SECTOR_SIZE);
+		if((Disk_Write(dirSector+1, sector->data)!=0)
+			return -1;
+	}
 
 
 	free(block_bitmap_1);				//free the used structures
