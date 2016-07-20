@@ -771,7 +771,15 @@ if (tmp != NULL) // root case /
 					next = strtok(NULL, "/"); // read the next token
 				}
 			}
+																										// find the grandfather dir
+			if(Dir_Read(fatherpath,(void *) dircontent, MAX_BLOCK_FILE*(MAX_FILENAME_LEN+INDEX_SIZE))!=0)
+				return -1; // read to find dir inode
+			dirPos = strstr(dircontent, dirname);														//save the position of the dirname to find inode 
+			snprintf(dirIndex, "%04d", dircontent+dirPos) // ??????????????????????????????????????????
 		}
+		else
+			dirIndex="0000";
+
 	}
 
 	Dir_Read(dirpath,(void *)dircontent, MAX_BLOCK_FILE*(MAX_FILENAME_LEN+INDEX_SIZE));	//read the dir content to find the file inode
@@ -855,26 +863,6 @@ if (tmp != NULL) // root case /
 	if(Disk_Write(2*BLOCK_SIZE/SECTOR_SIZE+1,block_bitmap_2->data)!=0)
 		return -1;
 
-	tmp = strtok(dirpath, "/");			//search for the father of the dir
-	while(tmp!=NULL){
-		dirname = tmp;
-		strcat(fatherpath, "/");
-		strcat(fatherpath, tmp);
-		tmp = strtok(NULL, "/");
-	}
-	fatherpath[strstr(fatherpath, dirname)-1] = '\0'; // find the grandfather dir
-	if(Dir_Read(fatherpath,(void *) dircontent, MAX_BLOCK_FILE*(MAX_FILENAME_LEN+INDEX_SIZE))!=0)
-		return -1; // read to find dir inode
-	dirPos = strstr(dircontent, dirname);
-	if(dirPos==NULL)
-		return -1;
-	
-	else{
-		i=0;
-		while(i<INDEX_SIZE)									//copy the dir inode index
-			dirIndex[i] = dircontent[dirPos+MAX_FILENAME_LEN+i];
-		
-	}
 	dirRelInode = atoi(dirIndex);
 	dirBlock = (int)dirRelInode*sizeof(Inode)/BLOCK_SIZE+3; // calculate the index of block
 	dirSector = (int)dirRelInode*sizeof(Inode)/SECTOR_SIZE+dirBlock*BLOCK_SIZE/SECTOR_SIZE; // index of sector into the inode table
