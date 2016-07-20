@@ -571,6 +571,8 @@ int File_Write(int fd, void *buffer, int size) {
 			return -1;
 		if(Disk_Read(2*BLOCK_SIZE/SECTOR_SIZE, datablockBitmap_2->data)!=0)
 			return -1;
+		strcpy(datablockBitmap, datablockBitmap_1->data);
+		strcat(datablockBitmap, datablockBitmap_2->data);
 
 		snprintf(datablockIndex, 5, (OpenFiles->fileOpen[fd]->info->blocks)+noBlock*INDEX_SIZE);	//read the data block index
 		datablock = atoi(datablockIndex) + DATA_BLOCK_BEGIN;
