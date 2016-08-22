@@ -1496,11 +1496,11 @@ int Dir_Unlink(char *path) {				// TODO read father dir and grandfather dir
 	strcpy(block, sector->data);
 
 	if (indexSonInode+sizeof(Inode)>SECTOR_SIZE)   // if inode is splitted between two sectors
-		{
-			if(Disk_Read(indexSonInode+1, sector->data))
-				return -1;
-			strcat(block, sector->data);
-		}
+	{
+		if(Disk_Read(indexSonInode+1, sector->data))
+			return -1;
+		strcat(block, sector->data);
+	}
 
 	// read son's informations
 	posCharStart=(int)(indexSonInode*sizeof(Inode))%SECTOR_SIZE; // recalculate the index of inode into the inode table
@@ -1546,17 +1546,17 @@ int Dir_Unlink(char *path) {				// TODO read father dir and grandfather dir
 
 	block = (char*) calloc( 1, sizeof(char)*BLOCK_SIZE);
 	if(Disk_Read(indexFatherSector, sector->data)!=0)
-			return -1;		//read son's inode info
+		return -1;		//read son's inode info
 	strcpy(block, sector->data);
 	blockread=0;
 
-		if (indexFatherInode+sizeof(Inode)>SECTOR_SIZE)   // if inode is splitted between two sectors
-			{
-				if(Disk_Read(indexFatherSector+1, sector->data))
-					return -1;
-				strcat(block, sector->data);
-				blockread = 1;
-			}
+	if (indexFatherInode+sizeof(Inode)>SECTOR_SIZE)   // if inode is splitted between two sectors
+	{
+		if(Disk_Read(indexFatherSector+1, sector->data))
+			return -1;
+		strcat(block, sector->data);
+		blockread = 1;
+	}
 
 	posCharStart=(int)(indexFatherInode*sizeof(Inode))%SECTOR_SIZE; // recalculate the index of inode into the inode table
 	dadInode->type = *(block+posCharStart); // read the type of inode
@@ -1603,7 +1603,6 @@ int Dir_Unlink(char *path) {				// TODO read father dir and grandfather dir
 	///////////////////////////////////////////////////////////////////////////////////
 	indexSonInode = atoi(sonIndex);
 	if(indexSonInode/sizeof(Inode)<512){						//free the inode from the inode bitmap
-
 		if(Disk_Read(1*BLOCK_SIZE/SECTOR_SIZE, inodeBitmap->data))
 			return -1;
 		inodeBitmap->data[indexSonInode] = 0;
