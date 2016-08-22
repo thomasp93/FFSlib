@@ -722,8 +722,6 @@ int File_Close(int fd) {
 int File_Unlink(char *file) {
 
 
-	// TODO update dir info
-
 	Inode* fileType= (Inode *) calloc(1, sizeof(Inode));
 	Inode* dir= (Inode *) calloc(1, sizeof(Inode));
 	char* filename;
@@ -1537,13 +1535,15 @@ int Dir_Unlink(char *path) {				// TODO read father dir and grandfather dir
 	block = (char*) calloc( 1, sizeof(char)*BLOCK_SIZE);
 	if(Disk_Read(indexFatherSector, sector->data)!=0)
 			return -1;		//read son's inode info
-		strcpy(block, sector->data);
+	strcpy(block, sector->data);
+	blockread=0;
 
 		if (indexFatherInode+sizeof(Inode)>SECTOR_SIZE)   // if inode is splitted between two sectors
 			{
 				if(Disk_Read(indexFatherSector+1, sector->data))
 					return -1;
 				strcat(block, sector->data);
+				blockread = 1;
 			}
 
 	posCharStart=(int)(indexFatherInode*sizeof(Inode))%SECTOR_SIZE; // recalculate the index of inode into the inode table
@@ -1564,9 +1564,10 @@ int Dir_Unlink(char *path) {				// TODO read father dir and grandfather dir
 	intIndex = atoi(dadInode->size)-INDEX_SIZE;
 	snprintf(dadInode->size, MAX_FILE_SIZE_LEN, intIndex) ;
 
+
 	//TODO save updated father's inode
 
-	char* inodeInfo = (char*) calloc(1, sizeof(Inode));
+	/*char* inodeInfo = (char*) calloc(1, sizeof(Inode));
 	if(indexSonInode+sizeof(Inode)<SECTOR_SIZE) // if the inode is less than size free into the inode
 		strcpy(sector->data+indexSonInode, inodeInfo); // write the inode into the sector
 	else
@@ -1586,9 +1587,26 @@ int Dir_Unlink(char *path) {				// TODO read father dir and grandfather dir
 			sector->data[noChar] = inodeInfo[i]; // write the char into the sector
 		}
 	}
+	*/
+													//save the father updated
 
+	if(blockread=0){								//if i read only a sector 
+		snprintf(sector->data, SECTOR_SIZE, block);
+		if(Disk_Write(indexFatherSector, sector->data)!=0)
+			return -1;
+	}
+	else{
+		snprintf(sector->data, SECTOR_SIZE, block);
+		if(Disk_Write(indexFatherSector, sector->data)!=0)
+			return -1;
+		snprintf(sector->data, SECTOR_SIZE, block+SECTOR_SIZE);
+		if(Disk_Write(indexFatherSector+1, sector->data)!=0)
+			return -1;
+	}
+
+	///////////////////////////////////////////////////////////////////////////////////
 	indexSonInode = atoi(sonIndex);
-	if(indexSonInode/sizeof(Inode)<512){
+	if(indexSonInode/sizeof(Inode)<512){						//free the inode from the inode bitmap
 
 		if(Disk_Read(1*BLOCK_SIZE/SECTOR_SIZE, inodeBitmap->data))
 			return -1;
@@ -1603,11 +1621,6 @@ int Dir_Unlink(char *path) {				// TODO read father dir and grandfather dir
 		if(Disk_Write(1*BLOCK_SIZE/SECTOR_SIZE+1, inodeBitmap->data))
 			return -1;
 	}
-
-
-
-
-
 
 
 	printf("Dir_Unlink\n");
