@@ -1565,7 +1565,7 @@ int Dir_Unlink(char *path) {				// TODO read father dir and grandfather dir
 
 	
 	intIndex = atoi(dadInode->size)-INDEX_SIZE;
-	snprintf(dadInode->size, MAX_FILE_SIZE_LEN, intIndex) ;
+	snprintf(dadInode->size, MAX_FILE_SIZE_LEN, "%05d" ,intIndex) ;
 
 
 	//TODO save updated father's inode
