@@ -5,8 +5,8 @@
 int osErrno;
 
 // global variables
-const int INODE_TABLE_BEGIN = SUPERBLOCK_INDEX+INODE_BITMAP_INDEX+DATA_BLOCK_INDEX; // begin index inode table
-const int DATA_BLOCK_BEGIN = 150*MAX_INODE+INODE_TABLE_BEGIN; // begin index data blocks
+int INODE_TABLE_BEGIN;
+int DATA_BLOCK_BEGIN;
 
 ////////////////////////////////////////////////////////////////////////
 // funzione che crea il tutto, va chiamata una volta sola all'inizio
@@ -18,6 +18,9 @@ int FS_Init(char *path) {
 	int i, create, noChar=0, noSectorVisited=1;
 
 	printf("FS_Init %s\n", path);
+
+	INODE_TABLE_BEGIN = SUPERBLOCK_INDEX+INODE_BITMAP_INDEX+DATA_BLOCK_INDEX; // set the begin index inode table
+	DATA_BLOCK_BEGIN = 150*MAX_INODE+INODE_TABLE_BEGIN; // set the begin index data blocks
 
 	// open disk
 	if (Disk_Load(path) == -1) { // load the disk with error
@@ -556,7 +559,7 @@ int File_Write(int fd, void *buffer, int size) {
 					return -1;
 				sectorPos = 0;
 			}
-			sector->data[sectorPos+i] = (char) buffer[i];
+			sector->data[sectorPos+i] = ((char*) buffer)[i];
 		}
 
 		if(Disk_Write(datablock*BLOCK_SIZE/SECTOR_SIZE+noSector, sector->data)!=0)					//save the sector update
@@ -614,7 +617,7 @@ int File_Write(int fd, void *buffer, int size) {
 			if(Disk_Read(datablock*BLOCK_SIZE/SECTOR_SIZE+noSector, sector->data)!=0)					//read the right sector
 						return -1;	
 			for(j=sectorPos;j<SECTOR_SIZE;j++){
-				sector->data[j]= (char) buffer[i];
+				sector->data[j]= ((char*) buffer)[i];
 				i++;
 				blockPos++;
 			}
