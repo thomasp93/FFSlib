@@ -904,13 +904,13 @@ int File_Unlink(char *file) {
 
 	// write the father inode into the block
 	posCharStart = (int)(dirInode*sizeof(Inode))%SECTOR_SIZE;
-	*(block+posCharStart)=dirInode->type; // copy the type of the inode
+	*(block+posCharStart)=dir->type; // copy the type of the inode
 	posCharStart++;
-	strcpy(block+posCharStart, dirInode->name); // copy the name
+	strcpy(block+posCharStart, dir->name); // copy the name
 	posCharStart+=MAX_FILENAME_LEN;
-	strcpy(block+posCharStart, dirInode->size); // copy the size
+	strcpy(block+posCharStart, dir->size); // copy the size
 	posCharStart+=MAX_FILE_SIZE_LEN;
-	strcpy(block+posCharStart, dirInode->blocks); // copy the blocks
+	strcpy(block+posCharStart, dir->blocks); // copy the blocks
 	
 	if(blockread=0){								//if i read only a sector
 		snprintf(sector->data, SECTOR_SIZE, block);
