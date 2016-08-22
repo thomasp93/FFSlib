@@ -1576,31 +1576,15 @@ int Dir_Unlink(char *path) {				// TODO read father dir and grandfather dir
 	intIndex = atoi(dadInode->size)-INDEX_SIZE;
 	snprintf(dadInode->size, MAX_FILE_SIZE_LEN, "%05d" ,intIndex) ;
 
-
-	//TODO save updated father's inode
-
-	/*char* inodeInfo = (char*) calloc(1, sizeof(Inode));
-	if(indexSonInode+sizeof(Inode)<SECTOR_SIZE) // if the inode is less than size free into the inode
-		strcpy(sector->data+indexSonInode, inodeInfo); // write the inode into the sector
-	else
-	{
-		for(i=0, noChar=indexSonInode; i<sizeof(Inode); i++, noChar++)
-		{
-			if(i+indexSonInode<SECTOR_SIZE) // if the sector is full
-			{
-				if(Disk_Write(indexSonSector, sector->data))
-					return -1;; // write the first sector
-				indexSonSector++; // increment the sector
-				if(Disk_Read(indexSonSector, sector->data))
-					return -1; // read the new sector
-				noChar = 0; // reset the number char written
-			}
-
-			sector->data[noChar] = inodeInfo[i]; // write the char into the sector
-		}
-	}
-	*/
-													//save the father updated
+	// write the father inode into the block
+	posCharStart = (int)(indexFatherInode*sizeof(Inode))%SECTOR_SIZE;
+	*(block+posCharStart)=dadInode->type; // copy the type of the inode
+	posCharStart++;
+	strcpy(block+posCharStart, dadInode->name); // copy the name
+	posCharStart+=MAX_FILENAME_LEN;
+	strcpy(block+posCharStart, dadInode->size); // copy the size
+	posCharStart+=MAX_FILE_SIZE_LEN;
+	strcpy(block+posCharStart, dadInode->blocks); // copy the blocks
 
 	if(blockread=0){								//if i read only a sector 
 		snprintf(sector->data, SECTOR_SIZE, block);
