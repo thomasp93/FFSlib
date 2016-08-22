@@ -1556,7 +1556,7 @@ int Dir_Unlink(char *path) {				// TODO read father dir and grandfather dir
 	posCharStart+=MAX_FILENAME_LEN;
 	snprintf(dadInode->size, MAX_FILE_SIZE_LEN, block+posCharStart);
 	posCharStart+=MAX_FILE_SIZE_LEN;
-	snprintf(sonInode->blocks, MAX_BLOCK_FILE*INDEX_SIZE, block+posCharStart);
+	snprintf(dadInode->blocks, MAX_BLOCK_FILE*INDEX_SIZE, block+posCharStart);
 
 	// delete inode of the son
 	posIndextodelete = strstr(dadInode->blocks, sonIndex);
