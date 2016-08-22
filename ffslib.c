@@ -1428,7 +1428,7 @@ int Dir_Read(char *path, void *buffer, int size) {
 		i++;
 	}
 
-	*buffer = (void) sons;
+	buffer = (void*) sons;
 
 	return 0;
 }
@@ -1436,12 +1436,21 @@ int Dir_Read(char *path, void *buffer, int size) {
 int Dir_Unlink(char *path) {				// TODO read father dir and grandfather dir
 
 	Sector* sector = (Sector*) calloc(1, sizeof(Sector));
+	Sector* inodeBitmap = (Sector*) calloc(1, sizeof(Sector));
 	Inode* dadInode = (Inode*) calloc(1, sizeof(Inode));
 	Inode* sonInode = (Inode*) calloc(1, sizeof(Inode));
 	char fatherData[MAX_BLOCK_FILE*(MAX_FILENAME_LEN+INDEX_SIZE)], sonIndex[5], fatherIndex[5];
-	char* token, tmp, sonPos, sonName, block,fatherpath, grandfatherpath,fathername, posFatherInode;
-	int indexSonInode, indexSonSector, indexSonBlock, i, indexFatherInode, indexFatherBlock, indexFatherSector, noChar, posIndextodelete, intIndex;
-	Sector* inodeBitmap = (Sector*) calloc(1, sizeof(Sector));
+	char* token;
+	char* tmp;
+	char* sonPos;
+	char* sonName;
+	char* block;
+	char* fatherpath;
+	char* grandfatherpath;
+	char* fathername;
+	char* posFatherInode;
+	char* posIndextodelete;
+	int indexSonInode, indexSonSector, indexSonBlock, i, indexFatherInode, indexFatherBlock, indexFatherSector, noChar, intIndex, posCharStart, blockread;
 
 	if (sizeof(path)>MAX_PATHNAME_LEN) // control the path length
 		return -1;
@@ -1460,7 +1469,7 @@ int Dir_Unlink(char *path) {				// TODO read father dir and grandfather dir
 		return -1;
 	}
 
-	fatherpath[strstr(fatherData, sonName)-1] = '\0';    ///find the father path
+	*(strstr(fatherData, sonName)) = '\0';    //find the father path
 
 
 	if(Dir_Read(fatherpath,(void *)fatherData, MAX_BLOCK_FILE*(MAX_FILENAME_LEN+INDEX_SIZE))!=0)
@@ -1473,7 +1482,7 @@ int Dir_Unlink(char *path) {				// TODO read father dir and grandfather dir
 	else {							// copy the son's inode index
 		i=0;
 		while(i<INDEX_SIZE){
-			sonIndex[i] = fatherData[sonPos+strlen(sonName)+i];
+			sonIndex[i] = *(sonPos+strlen(sonName)+i);
 		}
 	}
 
@@ -1495,7 +1504,7 @@ int Dir_Unlink(char *path) {				// TODO read father dir and grandfather dir
 
 	// read son's informations
 	posCharStart=(int)(indexSonInode*sizeof(Inode))%SECTOR_SIZE; // recalculate the index of inode into the inode table
-	snprintf(sonInode->type, 1, block+posCharStart); // read the type of inode
+	sonInode->type = *(block+posCharStart); // read the type of inode
 	posCharStart+=1; // add the char readden
 	snprintf(sonInode->name, MAX_FILENAME_LEN, block+posCharStart); // read the name of file (directory)
 	posCharStart+=MAX_FILENAME_LEN;
@@ -1526,7 +1535,7 @@ int Dir_Unlink(char *path) {				// TODO read father dir and grandfather dir
 	else {							// copy the son's inode index
 		i=0;
 		while(i<INDEX_SIZE){
-			fatherIndex[i] = fatherData[posFatherInode+strlen(fathername)+i];
+			fatherIndex[i] = *(posFatherInode+strlen(fathername)+i);
 		}
 	}
 	// find father position
@@ -1550,7 +1559,7 @@ int Dir_Unlink(char *path) {				// TODO read father dir and grandfather dir
 			}
 
 	posCharStart=(int)(indexFatherInode*sizeof(Inode))%SECTOR_SIZE; // recalculate the index of inode into the inode table
-	snprintf(dadInode->type, 1, block+posCharStart); // read the type of inode
+	dadInode->type = *(block+posCharStart); // read the type of inode
 	posCharStart+=1; // add the char readden
 	snprintf(dadInode->name, MAX_FILENAME_LEN, block+posCharStart); // read the name of file (directory)
 	posCharStart+=MAX_FILENAME_LEN;
@@ -1561,7 +1570,7 @@ int Dir_Unlink(char *path) {				// TODO read father dir and grandfather dir
 	// delete inode of the son
 	posIndextodelete = strstr(dadInode->blocks, sonIndex);
 	for(i=0; i<INDEX_SIZE; i++)											// delete father "link" to the son
-		dadInode->blocks[i+posIndextodelete] = dadInode->blocks[atoi(dadInode->size) + 1 - INDEX_SIZE + i];
+		*(posIndextodelete+i) = dadInode->blocks[atoi(dadInode->size) + 1 - INDEX_SIZE + i];
 
 	
 	intIndex = atoi(dadInode->size)-INDEX_SIZE;
