@@ -103,6 +103,11 @@ int FS_Init(char *path) {
 	printf("Disk load correctly");
 	openFiles = (OpenFileTable*) malloc(sizeof(OpenFileTable));
 
+	// free the memory allocation
+	free(block);
+	free(tmp);
+	free(sector);
+
 	return 0;
 }
 
@@ -366,6 +371,11 @@ int File_Create(char *file) {
 	}
 
 	Disk_Write(indexSector, sector->data); // write the sector into the disk
+
+	// free memory
+	free(sector);
+	free(dadInode);
+	free(fileInode);
     
 	return 0;
 }
@@ -470,6 +480,11 @@ int File_Open(char *file) {
 	// insert the file into the openFileTable
 	openFiles->fileOpen[fd] = fileType;
 
+	// free memory
+	free(fileType);
+	free(inode);
+	free(sector);
+
 	return fd; // return the place of file
 }
 
@@ -521,6 +536,9 @@ int File_Read(int fd, void *buffer, int size) {
 	}
 
 	snprintf(buffer, noCharRead, block+index); // read the chars into the block
+
+	// free memory
+	free(sector);
 
 	return 0;
 }
@@ -626,6 +644,12 @@ int File_Write(int fd, void *buffer, int size) {
 	}
 	snprintf(openFiles->fileOpen[fd]->info->size, MAX_FILE_SIZE_LEN, "%05d", atoi(openFiles->fileOpen[fd]->info->size)+size);
 	printf("File_Write\n");
+
+	// free memory
+	free(sector);
+	free(datablockBitmap_1);
+	free(datablockBitmap_2);
+
 	return 0;
 }
 
@@ -717,14 +741,15 @@ int File_Close(int fd) {
 		return -1;
 	}
 
+	// free memory
+	free(sector);
+
 	return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////
 
 int File_Unlink(char *file) {
-
-
 	Inode* fileType= (Inode *) calloc(1, sizeof(Inode));
 	Inode* dir= (Inode *) calloc(1, sizeof(Inode));
 	char* filename;
@@ -934,6 +959,10 @@ int File_Unlink(char *file) {
 	free(file);
 	free(dir);						
 	printf("File_Unlink\n");
+
+	// free memory
+	free(fileType);
+	free(dir);
 
 	return 0;
 }
@@ -1182,6 +1211,11 @@ int Dir_Create(char *path) {
 		osErrno = E_CREATE;
 		return -1;
 	}
+
+	// free memory
+	free(sector);
+	free(dadInode);
+	free(dir);
     
     	return 0;
 }
@@ -1269,6 +1303,10 @@ int Dir_Size(char *path) {
 
 
 	printf("The size of %s is %s\n", path, inode->size);
+
+	// free memory
+	free(inode);
+	free(sector);
 	
 	return 0;
 }
@@ -1439,11 +1477,15 @@ int Dir_Read(char *path, void *buffer, int size) {
 
 	buffer = (void*) sons;
 
+	// free memory
+	free(sector);
+	free(dadInode);
+	free(sonInode);
+
 	return 0;
 }
 
-int Dir_Unlink(char *path) {				// TODO read father dir and grandfather dir
-
+int Dir_Unlink(char *path) {
 	Sector* sector = (Sector*) calloc(1, sizeof(Sector));
 	Sector* inodeBitmap = (Sector*) calloc(1, sizeof(Sector));
 	Inode* dadInode = (Inode*) calloc(1, sizeof(Inode));
@@ -1628,6 +1670,12 @@ int Dir_Unlink(char *path) {				// TODO read father dir and grandfather dir
 
 
 	printf("Dir_Unlink\n");
-	return 0;
-	
+
+	// free memory
+	free(sector);
+	free(inodeBitmap);
+	free(dadInode);
+	free(sonInode);
+
+	return 0;	
 }
