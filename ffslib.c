@@ -77,6 +77,8 @@ int FS_Init(char *path) {
 	    	for(i=1; i<NUM_SECTORS; i++) // set all sector with zeros
 	      		Disk_Write(i, sector->data);
 
+		free(sector);
+
 		Dir_Create("/"); // create the root directory
 	}
 	else // read exist disk
@@ -106,7 +108,6 @@ int FS_Init(char *path) {
 	// free the memory allocation
 	free(block);
 	free(tmp);
-	free(sector);
 
 	return 0;
 }
