@@ -70,12 +70,12 @@ int FS_Init(char *path) {
 		}
 
 		// set a sector with all zero
-		sector = (Sector*) calloc(1, sizeof(Sector));
-		for(i=0; i<SECTOR_SIZE; i++)
-			sector->data[i] = '0'; 
-		
-		for(i=1; i<NUM_SECTORS; i++) // set all sector with zeros
-			Disk_Write(i, sector->data);
+	    	sector = (Sector*) calloc(1, sizeof(Sector));
+	    	for(i=0; i<SECTOR_SIZE; i++)
+	      		sector->data[i] = '0'; 
+	    
+	    	for(i=1; i<NUM_SECTORS; i++) // set all sector with zeros
+	      		Disk_Write(i, sector->data);
 
 		Dir_Create("/"); // create the root directory
 	}
@@ -94,13 +94,13 @@ int FS_Init(char *path) {
 		for(i=0; i<strlen(TYPE_FILESYSTEM); i++) // control type fs
 			if(TYPE_FILESYSTEM[i]!=block->sector->data[i]) // fs not exactly
 			{
-				printf("File system not exactly!!");
+				printf("File system not exactly!!\n");
 				osErrno = E_GENERAL;
 				return -1;
 			}
 	}
 
-	printf("Disk load correctly");
+	printf("Disk load correctly\n");
 	openFiles = (OpenFileTable*) malloc(sizeof(OpenFileTable));
 
 	// free the memory allocation
@@ -984,7 +984,8 @@ int Dir_Create(char *path) {
 	char* granPath;
 	char* gran;
 	char* sons;
-	int i, c, position, indexBlock, indexSector, indexInode, noChar, size;
+	char c;
+	int i, position, indexBlock, indexSector, indexInode, noChar, size;
 	int indexInodeSon, indexInodeDad, posCharStart;
 
 	if (strlen(path)>MAX_PATHNAME_LEN)
@@ -998,14 +999,14 @@ int Dir_Create(char *path) {
 	// save the inode into the inode table
 	for(i=0; i<BLOCK_SIZE/SECTOR_SIZE; i++) // visit the inode bitmap
 	{
-		indexInode=0;
+		indexInodeSon=0;
 		if (Disk_Read(BLOCK_SIZE/SECTOR_SIZE+i, sector->data) != 0) // read bitmap inode
 		{
 			osErrno = E_CREATE;
 			return -1;
 		}
 
-		while(c!='0' && indexInode<SECTOR_SIZE) // while c is not equals to 0 and index inode is less than number inode into the sector
+		while(c!='0' && indexInodeSon<SECTOR_SIZE) // while c is not equals to 0 and index inode is less than number inode into the sector
 		{
 			c = sector->data[indexInodeSon]; // read index inode char
 			indexInodeSon++; // increment index
@@ -1155,6 +1156,8 @@ int Dir_Create(char *path) {
 			return -1;
 		}
 	} // end root case
+	else // root case
+		son = ""; // name of root is null
 
 	// creation a directory
 	Inode* dir = (Inode*) calloc(1, sizeof(Inode));
