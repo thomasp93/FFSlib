@@ -2,18 +2,8 @@
 
 int main(void)
 {
-
-	 // Sector* s = (Sector*) calloc(1, sizeof(Sector));
-	 // OpenFileTable* openFiles = (OpenFileTable*) calloc(1,sizeof(OpenFileTable));
-
-	 // strcpy(s->data, "0x1717");
-	 // Disk_Create();
-	 // Disk_Write(0, s->data);
-	 // FS_Sync("pips.img"); // se non va sono cazzi suoi (di pips)
-
-	Disk_Create();
-	FS_Init("pips.img");
-	Disk_Save("pips.img");
-	//printf("%05d", 1);
-
+	Disk_Create(); // creazione del disco
+	FS_Init("pips.img"); // creazione disco
+	Dir_Create("/home"); // creazione cartella home
+	FS_Sync("pips.img"); // salvataggio disco
 }

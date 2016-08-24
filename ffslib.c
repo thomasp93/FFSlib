@@ -105,6 +105,9 @@ int FS_Init(char *path) {
 	printf("Disk load correctly\n");
 	openFiles = (OpenFileTable*) malloc(sizeof(OpenFileTable));
 
+	for(i=0; i<MAX_FILE_OPEN; i++)
+		openFiles->fileOpen[i] = NULL;
+
 	// free the memory allocation
 	free(block);
 	free(tmp);
@@ -975,9 +978,11 @@ int File_Unlink(char *file) {
 int Dir_Create(char *path) {
 	Sector* sector = (Sector*) calloc(1, sizeof(Sector));
 	Inode* dadInode = (Inode*) calloc(1, sizeof(Inode));
-	char* buff;
+	char path2[MAX_PATHNAME_LEN];
+	strcpy(path2, path);
+	char* buff = (char*) calloc(1, BLOCK_SIZE);
 	char* subString;
-	char* block;
+	char* block = (char*) calloc(1, BLOCK_SIZE);
 	char* granfather;
 	char* dad;
 	char* son;
@@ -986,7 +991,7 @@ int Dir_Create(char *path) {
 	char* gran;
 	char* sons;
 	char c;
-	int i, position, indexBlock, indexSector, indexInode, noChar, size;
+	int i, position, indexBlock, indexSector, indexInode, indexBlockDad, indexSectorDad, noChar, size;
 	int indexInodeSon, indexInodeDad, posCharStart;
 
 	if (strlen(path)>MAX_PATHNAME_LEN)
@@ -1040,7 +1045,7 @@ int Dir_Create(char *path) {
 	indexInode = (int)(indexInodeSon*sizeof(Inode))%SECTOR_SIZE; // recalculate the index of inode into the inode table
 
 	// take the granfather's path
-	granfather = strtok(path, "/");
+	granfather = strtok(path2, "/");
 
 	if (granfather != NULL) // root case /
 	{
@@ -1054,17 +1059,17 @@ int Dir_Create(char *path) {
 
 			if (son != NULL) // /home/thomas/Scrivania gran=home dad=thomas son=Scrivania
 			{
-				strcat(granPath, gran); // /home
+				strcat(granPath, granfather); // /home
 
 				next = strtok(NULL, "/"); // /home/thomas/Scrivania/pippo gran=home dad=thomas son=Scrivania next=pippo
 
 				while (next != NULL)
 				{
-					gran = dad;
-					dad = son;
-					son = next;
+					strcpy(granfather, dad);
+					strcpy(dad, son);
+					strcpy(son, next);
 					strcat(granPath, "/");
-					strcat(granPath, gran);
+					strcat(granPath, granfather);
 					next = strtok(NULL, "/"); // read the next token
 				}
 			}
@@ -1080,22 +1085,26 @@ int Dir_Create(char *path) {
 			indexInodeDad = atoi(strstr(sons, dad)+MAX_FILENAME_LEN); // find the dad's inode
 		}
 		else // /home
+		{
 			indexInodeDad = 0; // dad inode found
+			son = granfather;
+		}
 
-		indexBlock = (int)indexInodeDad*sizeof(Inode)/BLOCK_SIZE+3; // calculate the index of block
-		indexSector = (int)indexInodeDad*sizeof(Inode)/SECTOR_SIZE+indexBlock*BLOCK_SIZE/SECTOR_SIZE; // index of sector into the inode table
-		indexInode = (int)(indexInodeDad*sizeof(Inode))%SECTOR_SIZE; // recalculate the index of inode into the inode table
+		indexBlockDad = (int)indexInodeDad*sizeof(Inode)/BLOCK_SIZE+3; // calculate the index of block
+		indexSectorDad = (int)indexInodeDad*sizeof(Inode)/SECTOR_SIZE+indexBlock*BLOCK_SIZE/SECTOR_SIZE; // index of sector into the inode table
+		indexInodeDad = (int)(indexInodeDad*sizeof(Inode))%SECTOR_SIZE; // recalculate the index of inode into the inode table
 
-		if (Disk_Read(indexSector, sector->data)!=0)
+		if (Disk_Read(indexSectorDad, sector->data)!=0)
 		{
 			osErrno = E_CREATE;
 			return -1;
 		}
+		
 		strcpy(block, sector->data);
 	
-		if (indexInode+sizeof(Inode)>SECTOR_SIZE)
+		if (indexInodeDad+sizeof(Inode)>SECTOR_SIZE)
 		{
-			if (Disk_Read(indexSector+1, sector->data)!=0)
+			if (Disk_Read(indexSectorDad+1, sector->data)!=0)
 			{
 				osErrno = E_CREATE;
 				return -1;
@@ -1104,7 +1113,7 @@ int Dir_Create(char *path) {
 		}	
 
 		// read the dad's inode
-		posCharStart=indexInode;
+		posCharStart=indexInodeDad;
 		dadInode->type = block[posCharStart]; // read the type of inode
 		posCharStart+=1; // add the char readden
 		snprintf(dadInode->name, MAX_FILENAME_LEN, "%s", block+posCharStart); // read the name of file (directory)
@@ -1116,30 +1125,34 @@ int Dir_Create(char *path) {
 		snprintf(buff, INDEX_SIZE, "%04d", indexInodeSon);
 		strcat(dadInode->blocks+atoi(dadInode->size), buff); // copy the index son into the dad's block
 
-		snprintf(dadInode->size, MAX_FILE_SIZE_LEN, "%05d", atoi(dadInode->size)+INDEX_SIZE); // edit the size of dad's inode
+		snprintf(dadInode->size, MAX_FILE_SIZE_LEN, "%05d", atoi(dadInode->size)+INDEX_SIZE-1); // edit the size of dad's inode
 
 		char* inodeInfo = (char*) calloc(1, sizeof(Inode)); // create the inode
 
 		strcat(inodeInfo, &dadInode->type);
-		strcat(inodeInfo, dadInode->name);
+		for(i=0; i<MAX_FILENAME_LEN; i++)
+			if (i<strlen(dadInode->name))
+				inodeInfo[i+1] = dadInode->name[i];
+			else
+				inodeInfo[i+1] = '0';
 		strcat(inodeInfo, dadInode->size);
 		strcat(inodeInfo, dadInode->blocks);
 
 		if(indexInode+sizeof(Inode)<SECTOR_SIZE) // if the inode is less than size free into the inode
-			strcpy(sector->data+indexInode, inodeInfo); // write the inode into the sector
+			strcpy(sector->data+indexInodeDad, inodeInfo); // write the inode into the sector
 		else
 		{
-			for(i=0, noChar=indexInode; i<sizeof(Inode); i++, noChar++)
+			for(i=0, noChar=indexInodeDad; i<sizeof(Inode); i++, noChar++)
 			{
-				if(i+indexInode<SECTOR_SIZE) // if the sector is full
+				if(i+indexInodeDad<SECTOR_SIZE) // if the sector is full
 				{
-					if (Disk_Write(indexSector, sector->data)!=0) // write the first sector
+					if (Disk_Write(indexSectorDad, sector->data)!=0) // write the first sector
 					{
 						osErrno = E_CREATE;
 						return -1;
 					}
-					indexSector++; // increment the sector
-					if (Disk_Read(indexSector, sector->data)!=0) // read the new sector
+					indexSectorDad++; // increment the sector
+					if (Disk_Read(indexSectorDad, sector->data)!=0) // read the new sector
 					{
 						osErrno = E_CREATE;
 						return -1;
@@ -1151,7 +1164,7 @@ int Dir_Create(char *path) {
 			}
 		}
 
-		if (Disk_Write(indexSector, sector->data)!=0) // write the sector into the disk
+		if (Disk_Write(indexSectorDad, sector->data)!=0) // write the sector into the disk
 		{
 			osErrno = E_CREATE;
 			return -1;
@@ -1177,8 +1190,11 @@ int Dir_Create(char *path) {
 
 	inodeInfo[indexInode+noChar] = dir->type; // write the dir type
 	noChar++;
-
-	strcpy(inodeInfo+noChar, dir->name);
+	for (i=0; i<MAX_FILENAME_LEN; i++)
+		if(i<strlen(dir->name))
+			*(inodeInfo+noChar+i) = dir->name[i];
+		else
+			*(inodeInfo+noChar+i) = '0';
 	noChar+=MAX_FILENAME_LEN;
 
 	strcpy(inodeInfo+noChar, "00000");

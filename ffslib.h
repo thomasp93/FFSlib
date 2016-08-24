@@ -62,12 +62,12 @@ int Dir_Unlink(char *path);
 #define MAX_PATHNAME_LEN 256
 #define MAX_FILE_OPEN 32
 #define MAX_INODE 1024
-#define MAX_FILE_SIZE_LEN 5 // lenght of char for file or directory size
-#define INDEX_SIZE 4 // number of address' digit
+#define MAX_FILE_SIZE_LEN 6 // lenght of char for file or directory size
+#define INDEX_SIZE 5 // number of address' digit
 #define SUPERBLOCK_INDEX 0
 #define INODE_BITMAP_INDEX 1
 #define DATA_BLOCK_INDEX 2
-#define INODE_SIZE 150
+//#define INODE_SIZE 150
 
 
 // block structure
