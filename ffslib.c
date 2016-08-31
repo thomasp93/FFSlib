@@ -981,17 +981,17 @@ int Dir_Create(char *path) { // TODO: problema creazione cartella duplicata
 	char path2[MAX_PATHNAME_LEN];
 	strcpy(path2, path);
 	char* buff = (char*) calloc(1, BLOCK_SIZE);
-	char* subString;
+	char* subString = NULL;
 	char* block = (char*) calloc(1, BLOCK_SIZE);
-	char* granfather;
-	char* dad;
-	char* son;
-	char* next;
-	char* granPath;
-	char* gran;
-	char* sons;
+	char* granfather = NULL;
+	char* dad = NULL;
+	char* son = NULL;
+	char* next = NULL;
+	char* granPath = NULL;
+	char* gran = NULL;
+	char* sons = NULL;
 	char c='1';
-	int i, position, indexBlock, indexSector, indexInode, indexBlockDad, indexSectorDad, noChar, size;
+	int i = 0, position=0, indexBlock=0, indexSector=0, indexInode=0, indexBlockDad=0, indexSectorDad=0, noChar=0, size=0;
 	int indexInodeSon, indexInodeDad, posCharStart;
 
 	if (strlen(path)>MAX_PATHNAME_LEN)
@@ -1206,7 +1206,7 @@ int Dir_Create(char *path) { // TODO: problema creazione cartella duplicata
 	{
 		for(i=0, noChar=indexInode; i<sizeof(Inode); i++, noChar++)
 		{
-			if(i+indexInode<SECTOR_SIZE) // if the sector is full
+			if(noChar>=SECTOR_SIZE) // if the sector is full
 			{
 				if (Disk_Write(indexSector, sector->data)!=0) // write the first sector
 				{
