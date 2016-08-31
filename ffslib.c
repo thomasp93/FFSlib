@@ -1119,14 +1119,13 @@ int Dir_Create(char *path) { // TODO: problema creazione cartella duplicata
 		snprintf(dadInode->name, MAX_FILENAME_LEN, "%s", block+posCharStart); // read the name of file (directory)
 		posCharStart+=MAX_FILENAME_LEN;
 		snprintf(dadInode->size, MAX_FILE_SIZE_LEN, "%s", block+posCharStart); // read the size of file (directory)
-		posCharStart+=MAX_FILE_SIZE_LEN;
+		posCharStart+=MAX_FILE_SIZE_LEN-1;
 		snprintf(dadInode->blocks, MAX_BLOCK_FILE*INDEX_SIZE, "%s", block+posCharStart); // read all block of inode
 
 		snprintf(buff, INDEX_SIZE, "%04d", indexInodeSon);
 		strcat(dadInode->blocks+atoi(dadInode->size), buff); // copy the index son into the dad's block
-
 		snprintf(dadInode->size, MAX_FILE_SIZE_LEN, "%05d", atoi(dadInode->size)+INDEX_SIZE-1); // edit the size of dad's inode
-
+		
 		char* inodeInfo = (char*) calloc(1, sizeof(Inode)); // create the inode
 
 		strcat(inodeInfo, &dadInode->type);
@@ -1137,14 +1136,14 @@ int Dir_Create(char *path) { // TODO: problema creazione cartella duplicata
 				inodeInfo[i+1] = '0';
 		strcat(inodeInfo, dadInode->size);
 		strcat(inodeInfo, dadInode->blocks);
-
-		if(indexInode+sizeof(Inode)<SECTOR_SIZE) // if the inode is less than size free into the inode
+printf("dimensione inodeInfo: %d\nInodeInfo: %s", strlen(inodeInfo), inodeInfo);
+		if(indexInodeDad+sizeof(Inode)<SECTOR_SIZE) // if the inode is less than size free into the inode
 			strcpy(sector->data+indexInodeDad, inodeInfo); // write the inode into the sector
 		else
 		{
-			for(i=0, noChar=indexInodeDad; i<sizeof(Inode); i++, noChar++)
+			for(i=0, noChar=indexInodeDad; i<sizeof(Inode) && inodeInfo[i]!='\0'; i++, noChar++)
 			{
-				if(i+indexInodeDad<SECTOR_SIZE) // if the sector is full
+				if(noChar>=SECTOR_SIZE) // if the sector is full
 				{
 					if (Disk_Write(indexSectorDad, sector->data)!=0) // write the first sector
 					{
@@ -1163,6 +1162,8 @@ int Dir_Create(char *path) { // TODO: problema creazione cartella duplicata
 				sector->data[noChar] = inodeInfo[i]; // write the char into the sector
 			}
 		}
+
+		sector->data[strlen(inodeInfo)] = '0'; // correct the terminator of inode
 
 		if (Disk_Write(indexSectorDad, sector->data)!=0) // write the sector into the disk
 		{
@@ -1204,7 +1205,7 @@ int Dir_Create(char *path) { // TODO: problema creazione cartella duplicata
 		strcpy(sector->data+indexInode, inodeInfo); // write the inode into the sector
 	else
 	{
-		for(i=0, noChar=indexInode; i<sizeof(Inode); i++, noChar++)
+		for(i=0, noChar=indexInode; i<sizeof(Inode) && inodeInfo[i]!='\0'; i++, noChar++)
 		{
 			if(noChar>=SECTOR_SIZE) // if the sector is full
 			{
@@ -1225,6 +1226,8 @@ int Dir_Create(char *path) { // TODO: problema creazione cartella duplicata
 			sector->data[noChar] = inodeInfo[i]; // write the char into the sector
 		}
 	}
+
+	sector->data[strlen(inodeInfo)] = '0'; // correct the terminator of inode
 
 	if (Disk_Write(indexSector, sector->data)!=0) // write the sector into the disk
 	{
