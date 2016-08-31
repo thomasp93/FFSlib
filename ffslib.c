@@ -975,7 +975,7 @@ int File_Unlink(char *file) {
 // directory ops
 ////////////////////////////////////////////////////////////////////////
 
-int Dir_Create(char *path) {
+int Dir_Create(char *path) { // TODO: problema creazione cartella duplicata
 	Sector* sector = (Sector*) calloc(1, sizeof(Sector));
 	Inode* dadInode = (Inode*) calloc(1, sizeof(Inode));
 	char path2[MAX_PATHNAME_LEN];
@@ -990,7 +990,7 @@ int Dir_Create(char *path) {
 	char* granPath;
 	char* gran;
 	char* sons;
-	char c;
+	char c='1';
 	int i, position, indexBlock, indexSector, indexInode, indexBlockDad, indexSectorDad, noChar, size;
 	int indexInodeSon, indexInodeDad, posCharStart;
 
@@ -1188,7 +1188,7 @@ int Dir_Create(char *path) {
 	noChar=0; // reset the number of char written into the inode block
 	char* inodeInfo = (char*) calloc(1, sizeof(Inode)); // create the inode
 
-	inodeInfo[indexInode+noChar] = dir->type; // write the dir type
+	inodeInfo[noChar] = dir->type; // write the dir type
 	noChar++;
 	for (i=0; i<MAX_FILENAME_LEN; i++)
 		if(i<strlen(dir->name))
@@ -1336,9 +1336,9 @@ int Dir_Read(char *path, void *buffer, int size) {
 	Sector* sector = (Sector*) calloc(1, sizeof(Sector));
 	Inode* dadInode = (Inode*) calloc(1, sizeof(Inode));
 	Inode* sonInode = (Inode*) calloc(1, sizeof(Inode));
-	char* block;
+	char* block = (char*) calloc(1, SECTOR_SIZE);
 	char* token;
-	char* buff;
+	char* buff = (char*) malloc(sizeof(INDEX_SIZE));
 	char* sons;
 	char son[MAX_FILENAME_LEN+INDEX_SIZE];
 	int posCharStart=0, i, indexBlock, indexSector, indexInode, noChar;
