@@ -1249,7 +1249,7 @@ int Dir_Size(char *path) {
 	char path2[MAX_PATHNAME_LEN];
 	strcpy(path2, path);
 	char* dadPath;
-	char* block;
+	char* block = (char*) calloc(1, BLOCK_SIZE);
 	char* index;
 	char* sons;
 	char* token;
@@ -1283,19 +1283,16 @@ int Dir_Size(char *path) {
 		if (Dir_Read(dadPath, &sons, size)!=0)
 			return -1;
 
-		sons = (char*) sons;
-		i=0;
-		while (i<size && strcmp(name, token)!=0)
-		{
-			snprintf(name, MAX_FILENAME_LEN, "%s", sons+i);
-			snprintf(index, INDEX_SIZE, "%s", sons+MAX_FILENAME_LEN+i);
-			i+=MAX_FILENAME_LEN+INDEX_SIZE;
-		}
+		//sons = (char*) sons;
+		//i=0;
 
-		if (strcmp(name, token)!=0) // not found the son
+		name = strstr(sons, token); // find the directory inside the father
+
+		if (name==NULL) // not found the son
 			return -1;
 
-		indexInode = atoi(index);
+		//snprintf(index, INDEX_SIZE, "%s", name+MAX_FILENAME_LEN-1); // read the index
+		indexInode = atoi(name+MAX_FILENAME_LEN); // convert the index
 	}
 	else
 		indexInode = 0;
@@ -1345,7 +1342,7 @@ int Dir_Read(char *path, void *buffer, int size) {
 	char* block = (char*) calloc(1, SECTOR_SIZE);
 	char* token;
 	char* buff = (char*) malloc(sizeof(INDEX_SIZE));
-	char* sons;
+	char** sons = (char**) buffer;
 	char son[MAX_FILENAME_LEN+INDEX_SIZE+1];
 	int posCharStart=0, i, indexBlock, indexSector, indexInode, noChar;
 
@@ -1456,7 +1453,7 @@ int Dir_Read(char *path, void *buffer, int size) {
 	}
 
 	// found the directory inode
-	sons = (char*) calloc(1, size); // create the buffer for sons
+	//sons = (char*) calloc(1, size); // create the buffer for sons
 	i = 0;
 	while (i*INDEX_SIZE<atoi(dadInode->size) && i*INDEX_SIZE<size) // visit all inode
 	{
@@ -1498,8 +1495,8 @@ int Dir_Read(char *path, void *buffer, int size) {
 
 		son[noChar] = '\0';
 
-		strcat(sons, son); // copy the son
-		printf("il figlio è: %s\ni figli sono: %s\n", son, sons);
+		strcat(*sons, son); // copy the son
+		printf("il figlio è: %s\ni figli sono: %s\n", son, *sons);
 
 		i++;
 	}
