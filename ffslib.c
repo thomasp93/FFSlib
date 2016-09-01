@@ -1339,7 +1339,7 @@ int Dir_Read(char *path, void *buffer, int size) {
 	Inode* sonInode = (Inode*) calloc(1, sizeof(Inode));
 	char path2[MAX_PATHNAME_LEN];
 	strcpy(path2, path);
-	char* block = (char*) calloc(1, SECTOR_SIZE);
+	char* block = (char*) calloc(1, BLOCK_SIZE);
 	char* token;
 	char* buff = (char*) malloc(sizeof(INDEX_SIZE));
 	char** sons = (char**) buffer;
