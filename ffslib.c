@@ -981,15 +981,15 @@ int Dir_Create(char *path) { // TODO: problema creazione cartella duplicata
 	char path2[MAX_PATHNAME_LEN];
 	strcpy(path2, path);
 	char* buff = (char*) calloc(1, BLOCK_SIZE);
-	char* subString = NULL;
+	char* subString = (char*) malloc(MAX_FILENAME_LEN);
 	char* block = (char*) calloc(1, BLOCK_SIZE);
-	char* granfather = NULL;
-	char* dad = NULL;
-	char* son = NULL;
-	char* next = NULL;
-	char* granPath = NULL;
-	char* gran = NULL;
-	char* sons = NULL;
+	char* granfather = (char*) malloc(MAX_FILENAME_LEN);
+	char* dad = (char*) malloc(MAX_FILENAME_LEN);
+	char* son = (char*) malloc(MAX_FILENAME_LEN);
+	char* next = (char*) malloc(MAX_FILENAME_LEN);
+	char* granPath = (char*) malloc(MAX_FILENAME_LEN);
+	char* gran = (char*) malloc(MAX_FILENAME_LEN);
+	char* sons;
 	char c='1';
 	int i = 0, position=0, indexBlock=0, indexSector=0, indexInode=0, indexBlockDad=0, indexSectorDad=0, noChar=0, size=0;
 	int indexInodeSon, indexInodeDad, posCharStart;
@@ -1073,10 +1073,16 @@ int Dir_Create(char *path) { // TODO: problema creazione cartella duplicata
 					next = strtok(NULL, "/"); // read the next token
 				}
 			}
+			else
+			{
+				
+				son = dad;
+				dad = granfather;
+			}
 
 			size = MAX_BLOCK_FILE*(INDEX_SIZE+MAX_FILENAME_LEN);
 			sons = (void*) calloc(1, size);
-			if (Dir_Read(granPath, sons, size) != 0)
+			if (Dir_Read(granPath, &sons, size) != 0)
 			{
 				osErrno = E_CREATE;
 				return -1;
@@ -1247,13 +1253,13 @@ int Dir_Size(char *path) {
 	Sector* sector = (Sector*) calloc(1, sizeof(Sector));
 	char path2[MAX_PATHNAME_LEN];
 	strcpy(path2, path);
-	char* dadPath;
+	char* dadPath = (char*) calloc(1, MAX_FILENAME_LEN);
 	char* block = (char*) calloc(1, BLOCK_SIZE);
 	char* index;
 	char* sons;
-	char* token;
-	char* next;
-	char* name;
+	char* token = (char*) calloc(1, MAX_FILENAME_LEN);
+	char* next = (char*) calloc(1, MAX_FILENAME_LEN);
+	char* name = (char*) calloc(1, MAX_FILENAME_LEN);
 	int i, size = MAX_BLOCK_FILE*(MAX_FILENAME_LEN+INDEX_SIZE), indexBlock, indexSector, indexInode, posCharStart;
 	
 	if (strlen(path)>MAX_PATHNAME_LEN) // control the pathname length
