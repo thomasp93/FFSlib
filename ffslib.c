@@ -1280,7 +1280,7 @@ int Dir_Size(char *path) {
 
 		sons = (void*) calloc(1, size);
 
-		if (Dir_Read(dadPath, sons, size)!=0)
+		if (Dir_Read(dadPath, &sons, size)!=0)
 			return -1;
 
 		sons = (char*) sons;
@@ -1499,10 +1499,12 @@ int Dir_Read(char *path, void *buffer, int size) {
 		son[noChar] = '\0';
 
 		strcat(sons, son); // copy the son
+		printf("il figlio è: %s\ni figli sono: %s\n", son, sons);
 
 		i++;
 	}
 
+	//printf("i figli sono: %s\n", sons);
 	buffer = (void*) sons;
 
 	// free memory
