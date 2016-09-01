@@ -1236,7 +1236,6 @@ int Dir_Create(char *path) { // TODO: problema creazione cartella duplicata
 
 	// free memory
 	free(sector);
-	//free(dadInode);
 	free(dir);
     
     	return 0;
@@ -1283,15 +1282,11 @@ int Dir_Size(char *path) {
 		if (Dir_Read(dadPath, &sons, size)!=0)
 			return -1;
 
-		//sons = (char*) sons;
-		//i=0;
-
 		name = strstr(sons, token); // find the directory inside the father
 
 		if (name==NULL) // not found the son
 			return -1;
 
-		//snprintf(index, INDEX_SIZE, "%s", name+MAX_FILENAME_LEN-1); // read the index
 		indexInode = atoi(name+MAX_FILENAME_LEN); // convert the index
 	}
 	else
@@ -1453,7 +1448,6 @@ int Dir_Read(char *path, void *buffer, int size) {
 	}
 
 	// found the directory inode
-	//sons = (char*) calloc(1, size); // create the buffer for sons
 	i = 0;
 	while (i*INDEX_SIZE<atoi(dadInode->size) && i*INDEX_SIZE<size) // visit all inode
 	{
@@ -1496,18 +1490,14 @@ int Dir_Read(char *path, void *buffer, int size) {
 		son[noChar] = '\0';
 
 		strcat(*sons, son); // copy the son
-		printf("il figlio è: %s\ni figli sono: %s\n", son, *sons);
-
 		i++;
 	}
 
-	//printf("i figli sono: %s\n", sons);
 	buffer = (void*) sons;
 
 	// free memory
 	free(sector);
 	free(dadInode);
-	//free(sonInode);
 
 	return 0;
 }
