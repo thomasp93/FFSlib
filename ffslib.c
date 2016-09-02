@@ -975,7 +975,7 @@ int File_Unlink(char *file) {
 // directory ops
 ////////////////////////////////////////////////////////////////////////
 
-int Dir_Create(char *path) { // TODO: problema creazione cartella duplicata
+int Dir_Create(char *path) { // TODO: problema creazione cartella duplicata, creazione cartella con path errato
 	Sector* sector = (Sector*) calloc(1, sizeof(Sector));
 	Inode* dadInode = (Inode*) calloc(1, sizeof(Inode));
 	char path2[MAX_PATHNAME_LEN];
@@ -1141,7 +1141,7 @@ int Dir_Create(char *path) { // TODO: problema creazione cartella duplicata
 				inodeInfo[i+1] = dadInode->name[i];
 			else
 				inodeInfo[i+1] = '0';
-		strcat(inodeInfo, dadInode->size);
+		strcat(inodeInfo, dadInode->size); 
 		strcat(inodeInfo, dadInode->blocks);
 		
 		if(indexInodeDad+sizeof(Inode)<SECTOR_SIZE) // if the inode is less than size free into the inode
@@ -1340,8 +1340,9 @@ int Dir_Read(char *path, void *buffer, int size) {
 	Inode* sonInode = (Inode*) calloc(1, sizeof(Inode));
 	char path2[MAX_PATHNAME_LEN];
 	strcpy(path2, path);
+	char* str = (char*) malloc(MAX_FILENAME_LEN);
 	char* block = (char*) calloc(1, BLOCK_SIZE);
-	char* token;
+	char* token = (char*) malloc(MAX_FILENAME_LEN);
 	char* buff = (char*) malloc(sizeof(INDEX_SIZE));
 	char** sons = (char**) buffer;
 	char son[MAX_FILENAME_LEN+INDEX_SIZE+1];
@@ -1383,6 +1384,14 @@ int Dir_Read(char *path, void *buffer, int size) {
 
 	while (token != NULL) // finchè ho token
 	{
+		// full the tokeni
+		strcpy(str, token);
+		i = strlen(str);
+		while (i < MAX_FILENAME_LEN-1)
+		{
+			*(str+i) = '0';
+			i++;
+		}
 		indexBlock = (int)indexInode*sizeof(Inode)/BLOCK_SIZE+3; // calculate the index of block
 		indexSector = (int)indexInode*sizeof(Inode)/SECTOR_SIZE+indexBlock*BLOCK_SIZE/SECTOR_SIZE; // index of sector into the inode table
 		indexInode = (int)(indexInode*sizeof(Inode))%SECTOR_SIZE; // recalculate the index of inode into the inode table
@@ -1409,7 +1418,7 @@ int Dir_Read(char *path, void *buffer, int size) {
 		snprintf(dadInode->blocks, MAX_BLOCK_FILE*INDEX_SIZE, "%s", block+posCharStart); // read all block of inode
 
 		i = 0;
-		while (i<atoi(dadInode->size) && strcmp(sonInode->name, token)!=0) // while visit the all inode or found the directory
+		while (i<atoi(dadInode->size) && strcmp(sonInode->name, str)!=0) // while visit the all inode or found the directory
 		{
 			snprintf(buff, INDEX_SIZE, "%s", dadInode->blocks+i); // read the index
 			indexInode = atoi(buff); // convert the index
@@ -1442,13 +1451,15 @@ int Dir_Read(char *path, void *buffer, int size) {
 			i+=INDEX_SIZE;
 		}
 
-		if (strcmp(sonInode->name, token)!=0) // if not found the directory
+		if (strcmp(sonInode->name, str)!=0) // if not found the directory
 		{
 			return -1; // return an error
 		}
 		else // if found it
 		{
 			dadInode = sonInode; // change the inode
+			//free(token);
+			//token = (char*) malloc(MAX_FILENAME_LEN);
 			token = strtok(NULL, "/"); // charge the new token
 		}
 	}
