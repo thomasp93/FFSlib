@@ -1075,7 +1075,6 @@ int Dir_Create(char *path) { // TODO: problema creazione cartella duplicata, cre
 			}
 			else
 			{
-				
 				son = dad;
 				dad = granfather;
 			}
@@ -1457,7 +1456,12 @@ int Dir_Read(char *path, void *buffer, int size) {
 		}
 		else // if found it
 		{
-			dadInode = sonInode; // change the inode
+			// change the inode
+			dadInode->type = sonInode->type;
+			strcpy(dadInode->name, sonInode->name);
+			strcpy(dadInode->size, sonInode->size);
+			strcpy(dadInode->blocks, sonInode->blocks);
+			
 			//free(token);
 			//token = (char*) malloc(MAX_FILENAME_LEN);
 			token = strtok(NULL, "/"); // charge the new token
@@ -1466,7 +1470,7 @@ int Dir_Read(char *path, void *buffer, int size) {
 
 	// found the directory inode
 	i = 0;
-	while (i*INDEX_SIZE<atoi(dadInode->size) && i*INDEX_SIZE<size) // visit all inode
+	while (i*(INDEX_SIZE-1)<atoi(dadInode->size) && i*INDEX_SIZE<size) // visit all inode
 	{
 		snprintf(buff, INDEX_SIZE, "%s", dadInode->blocks+i*(INDEX_SIZE-1)); // read the index
 		indexInode = atoi(buff); // convert the index
